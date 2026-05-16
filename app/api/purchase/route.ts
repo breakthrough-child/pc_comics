@@ -10,9 +10,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = verifyToken(token);
+    const user = verifyToken(token);
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -26,9 +26,9 @@ export async function POST(req: Request) {
     const existing = await prisma.purchase.findUnique({
       where: {
         userId_comicId: {
-          userId,
-          comicId,
-        },
+  userId: user.userId,
+  comicId,
+},
       },
     });
 
@@ -38,9 +38,9 @@ export async function POST(req: Request) {
 
     const purchase = await prisma.purchase.create({
       data: {
-        userId,
-        comicId,
-      },
+  userId: user.userId,
+  comicId,
+},
     });
 
     return NextResponse.json({

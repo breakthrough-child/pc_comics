@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import ComicPreviewModal from "../components/ComicPreviewModal";
 import { useSearchParams } from "next/navigation";
@@ -14,7 +14,7 @@ type Comic = {
   purchased: boolean;
 };
 
-export default function ComicsPage() {
+function ComicsPageInner() {
   const [comics, setComics] = useState<Comic[]>([]);
   const [editingComic, setEditingComic] = useState<any | null>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -464,7 +464,7 @@ async function logout() {
       </h2>
 
       <div style={{ fontSize: 13, opacity: 0.8 }}>
-        ⭐ {comic.avgRating ? comic.avgRating.toFixed(1) : "No rating"}
+        ⭐ {(comic as any).avgRating ? (comic as any).avgRating.toFixed(1) : "No rating"}
       </div>
 
       <p
@@ -761,4 +761,12 @@ async function logout() {
 
   </div>
 );
+}
+
+export default function ComicsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ComicsPageInner />
+    </Suspense>
+  );
 }

@@ -53,7 +53,9 @@ select: {
   avgRating,
 
   pages: comic.pages ?? [],
-  previewPages: comic.previewPages ?? comic.pages?.slice(0, 3) ?? [],
+  previewPages:
+  comic.previewPages ??
+  (Array.isArray(comic.pages) ? comic.pages.slice(0, 3) : []),
 };
 });
 

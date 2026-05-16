@@ -70,7 +70,7 @@ try {
     // 💌 SEND EMAIL TO COMMENT OWNER
     const email = like.comment.user.email;
 
-    if (email && email !== payload.email) {
+    if (email) {
       try {
             await sendEmail({
                 to: email,

@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 
-export default function SuccessPage() {
+function SuccessPageInner() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -27,4 +28,12 @@ export default function SuccessPage() {
   }, []);
 
   return <p>Processing payment...</p>;
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SuccessPageInner />
+    </Suspense>
+  );
 }

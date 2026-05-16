@@ -32,11 +32,12 @@ export default function ComicPreviewModal({
   const [previewIndex, setPreviewIndex] = React.useState(0);
   const [showShareMenu, setShowShareMenu] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
-
-  const previewImages = (comic.previewPages?.length
-        ? comic.previewPages
-        : comic.pages
-        )?.slice(0, 3) || [];
+  const [copied, setCopied] = React.useState(false);
+  
+  const previewImages = (((comic as any).previewPages?.length
+      ? (comic as any).previewPages
+      : comic.pages
+    ) ?? [])?.slice(0, 3);
 
 
         React.useEffect(() => {

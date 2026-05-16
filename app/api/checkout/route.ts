@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       mode: "payment",
 
       metadata: {
-        userId,
+        userId: userId.userId,
         comicId: comic.id,
         },
 

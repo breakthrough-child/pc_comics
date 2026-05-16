@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       },
     });
 
-    const token = signToken(user.id);
+    const token = signToken(user.id, "USER");
 
     const res = NextResponse.json({ message: "User created" });
 
