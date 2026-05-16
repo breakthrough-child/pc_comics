@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
+});
 
 export async function POST(req: Request) {
   try {
@@ -18,19 +22,29 @@ export async function POST(req: Request) {
     const uploadedUrls: string[] = [];
 
     for (const file of files) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-      const fileName = `${randomUUID()}-${file.name}`;
-      const filePath = path.join(process.cwd(), "public/uploads/comics", fileName);
+      const result = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: "comics",
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          )
+          .end(buffer);
+      });
 
-      await writeFile(filePath, buffer);
-
-      uploadedUrls.push(`/uploads/comics/${fileName}`);
+      uploadedUrls.push(result.secure_url);
     }
 
     return NextResponse.json({ pages: uploadedUrls });
   } catch (err) {
+    console.error("UPLOAD ERROR:", err);
+
     return NextResponse.json(
       { error: "Upload failed" },
       { status: 500 }
