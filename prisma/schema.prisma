@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  createdAt DateTime   @default(now())
+  role      String     @default("USER")
+  purchases Purchase[]
+  reviews   Review[]
+  comments Comment[]
+  likes    Like[]
+}
+
+model Comic {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  price       Float
+  imageUrl    String
+  createdAt   DateTime   @default(now())
+  pages       Json?
+  purchases   Purchase[]
+  reviews     Review[]
+  comments    Comment[]
+  previewPages Json?
+}
+
+model Purchase {
+  id        String   @id @default(uuid())
+  userId    String
+  comicId   String
+  createdAt DateTime @default(now())
+  comic     Comic    @relation(fields: [comicId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, comicId])
+}
+
+model Newsletter {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?  // 👈 ADD THIS LINE
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  comicId   String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  comic     Comic @relation(fields: [comicId], references: [id])
+  user      User  @relation(fields: [userId], references: [id])
+
+  @@unique([userId, comicId])
+}
+
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String
+  comicId   String
+  text      String
+  createdAt DateTime @default(now())
+
+  // 🔥 SELF-RELATION (REPLIES SYSTEM)
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  // RELATIONS
+  user  User  @relation(fields: [userId], references: [id])
+  comic Comic @relation(fields: [comicId], references: [id])
+
+  // LIKES
+  likes Like[]
+
+  @@index([comicId])
+}
+
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  commentId String
+
+  user      User     @relation(fields: [userId], references: [id])
+  comment   Comment  @relation(fields: [commentId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+}

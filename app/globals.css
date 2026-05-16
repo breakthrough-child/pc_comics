@@ -1,9 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fff0f6; /* ALWAYS a solid color */
+  --text: #2b2b2b;
+
+  --primary: #ff4da6;
+  --secondary: #ff85c1;
+  --accent: #ffd6ec;
+  --card-bg: rgba(255, 255, 255, 0.7);
+
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --input-border: rgba(0, 0, 0, 0.15);
+  --input-text: #2b2b2b;
+  --card-shadow: 0 10px 30px rgba(255, 77, 166, 0.12);
 }
+
 
 @theme inline {
   --color-background: var(--background);
@@ -12,15 +23,128 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* LIGHT THEME */
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 20% 20%, #ffc1cc, #ff007f 70%),
+    linear-gradient(135deg, rgba(255,255,255,0.08), transparent);
+}
+
+/* DARK THEME */
+[data-theme="dark"] {
+  --bg: #0a0a0f;
+  --text: #ffe6f2;
+
+  --primary: #ff4da6;
+  --secondary: #ff85c1;
+  --accent: #2a1622;
+  --card-bg: rgba(46, 46, 70, 0.75);
+
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-border: rgba(255, 255, 255, 0.15);
+  --input-text: #ffe6f2;
+
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 80% 80%, #0f0f0f, #4b0082 80%),
+    radial-gradient(circle at 80% 20%, rgba(75,0,130,0.4), transparent 70%),
+    linear-gradient(225deg, rgba(255,0,150,0.08), transparent);
+}
+
+
+
+/* 🎨 HALFTONE DOTS (VISIBLE VERSION) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  background-image:
+    radial-gradient(circle, rgba(0,0,0,0.18) 1.2px, transparent 1.2px);
+
+  background-size: 10px 10px;
+
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.6;
+}
+
+/* DARK MODE HALFTONE */
+[data-theme="dark"] body::before {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.12) 20px, transparent 20px);
+  opacity: 0.35;
+}
+
+/* Dark mode halftone tweak
+[data-theme="dark"] body::before {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+} */
+
+
+
+/* 💥 COMIC BURST (VISIBLE VERSION) */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255,255,255,0.06) 0deg 10deg,
+      transparent 10deg 20deg
+    );
+
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.25;
+}
+
+/* DARK MODE BURST */
+[data-theme="dark"] body::after {
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255,0,150,0.08) 0deg 10deg,
+      transparent 10deg 20deg
+    );
+  opacity: 0.2;
+}
+
+
+body {
+  position: relative;
+  overflow-x: hidden;
+}
+
+body > * {
+  position: relative;
+  z-index: 3;
+}
+
+button {
+  transition: all 0.3s ease;
+}
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
