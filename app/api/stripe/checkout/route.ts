@@ -39,8 +39,8 @@ export async function POST(req: Request) {
         quantity: 1,
       },
     ],
-    success_url: "http://localhost:3000/comics",
-    cancel_url: "http://localhost:3000/comics",
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/comics`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/comics`,
     metadata: {
   userId: String(userId),
   comicId: String(comicId),
