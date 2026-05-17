@@ -42,12 +42,15 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ pages: uploadedUrls });
-  } catch (err) {
-    console.error("UPLOAD ERROR:", err);
+  } catch (err: any) {
+  console.error("🔥 UPLOAD ERROR FULL:", err);
 
-    return NextResponse.json(
-      { error: "Upload failed" },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    {
+      error: "Upload failed",
+      details: err?.message || String(err),
+    },
+    { status: 500 }
+  );
+}
 }
