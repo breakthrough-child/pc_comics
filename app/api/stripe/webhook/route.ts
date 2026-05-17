@@ -32,11 +32,17 @@ export async function POST(req: Request) {
   // ✅ HANDLE PAYMENT SUCCESS
   if (event.type === "checkout.session.completed") {
 
+    console.log("✅ CHECKOUT SESSION COMPLETED EVENT RECEIVED");
     
     const session = event.data.object as Stripe.Checkout.Session;
 
     const userId = session.metadata?.userId;
     const comicId = session.metadata?.comicId;
+
+    console.log("WEBHOOK METADATA:", {
+      userId,
+      comicId,
+    });
 
     if (!userId || !comicId) {
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
@@ -53,12 +59,17 @@ export async function POST(req: Request) {
 });
 
 if (!existing) {
-  await prisma.purchase.create({
+
+  console.log("CREATING PURCHASE...");
+
+  const purchase = await prisma.purchase.create({
     data: {
       userId,
       comicId,
     },
   });
+
+  console.log("PURCHASE CREATED:", purchase);
 }
     } catch (err) {
       console.error("DB error:", err);

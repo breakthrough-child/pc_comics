@@ -7,8 +7,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 export async function POST(req: Request) {
   try {
-  const tokenData = getUserFromToken(req);
-  const userId = tokenData?.userId;
+  const user = getUserFromToken(req);
+  const userId = user?.userId;
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,12 +24,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!userId || !comicId) {
-    return NextResponse.json(
-      { error: "Missing metadata values" },
-      { status: 400 }
-    );
-  }
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
@@ -48,9 +42,9 @@ export async function POST(req: Request) {
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/comics`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/comics`,
     metadata: {
-                userId,
-                comicId,
-              },
+  userId: String(userId),
+  comicId: String(comicId),
+},
   });
 
   return NextResponse.json({ url: session.url });
