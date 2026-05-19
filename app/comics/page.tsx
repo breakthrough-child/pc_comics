@@ -255,7 +255,7 @@ async function logout() {
   }}
 >
   <h1 style={{ fontSize: 28, fontWeight: 800 }}>
-    💖 ComicVerse
+    💖PC Comics💖 
   </h1>
 
   <div style={{ display: "flex", gap: 10 }}>
