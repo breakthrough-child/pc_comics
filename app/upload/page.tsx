@@ -67,24 +67,50 @@ export default function UploadPage() {
     }
 
     // 1. Upload images first
-    const formData = new FormData();
+    // const formData = new FormData();
 
-    Array.from(files || []).forEach((file) => {
-      formData.append("files", file);
-    });
+    // Array.from(files || []).forEach((file) => {
+    //   formData.append("files", file);
+    // });
 
-    const uploadRes = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+    // const uploadRes = await fetch("/api/upload", {
+    //   method: "POST",
+    //   body: formData,
+    // });
 
-    const uploadData = await uploadRes.json();
+    // const uploadData = await uploadRes.json();
 
-    if (!uploadRes.ok) {
-      alert(uploadData.error);
-      setLoading(false);
-      return;
-    }
+    // if (!uploadRes.ok) {
+    //   alert(uploadData.error);
+    //   setLoading(false);
+    //   return;
+    // }
+
+
+    const uploadedPages: string[] = [];
+
+for (const file of Array.from(files || [])) {
+  const formData = new FormData();
+
+  formData.append("files", file);
+
+  const uploadRes = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  const uploadData = await uploadRes.json();
+
+  if (!uploadRes.ok) {
+    alert(uploadData.error || "Upload failed");
+
+    setLoading(false);
+
+    return;
+  }
+
+  uploadedPages.push(uploadData.pages[0]);
+}
 
     // 2. Save comic
     const res = await fetch("/api/comics", {
@@ -98,8 +124,10 @@ export default function UploadPage() {
         description,
         price: Number(price),
         imageUrl: uploadedCoverUrl,
-        pages: uploadData.pages,
-        previewPages: previewIndexes.map((i) => uploadData.pages[i]),
+        // pages: uploadData.pages,
+        pages: uploadedPages,
+        // previewPages: previewIndexes.map((i) => uploadData.pages[i]),
+        previewPages: previewIndexes.map((i) => uploadedPages[i]),
       }),
     });
 
