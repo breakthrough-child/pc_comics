@@ -11,6 +11,7 @@ export default function ReadComicPage() {
   const { id } = useParams();
 
   const [content, setContent] = useState<ComicContent | null>(null);
+  const [preloadedPages, setPreloadedPages] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [rating, setRating] = useState(0);
@@ -39,6 +40,7 @@ export default function ReadComicPage() {
 
         setContent(data);
         setPage(0);
+        setPreloadedPages([]);
       } catch {
         setError("Failed to load comic");
       }
@@ -46,6 +48,34 @@ export default function ReadComicPage() {
 
     if (id) fetchContent();
   }, [id]);
+
+  
+  useEffect(() => {
+    if (!content?.pages?.length) return;
+
+    const PRELOAD_AHEAD = 6;
+
+    for (
+      let i = page + 1;
+      i <= Math.min(
+        page + PRELOAD_AHEAD,
+        content.pages.length - 1
+      );
+      i++
+    ) {
+      const img = new Image();
+
+      img.src = content.pages[i];
+
+      img.onload = () => {
+        setPreloadedPages((prev) =>
+          prev.includes(content.pages[i])
+            ? prev
+            : [...prev, content.pages[i]]
+        );
+      };
+    }
+  }, [page, content]);
 
 
   useEffect(() => {
@@ -187,6 +217,8 @@ return (
       >
         <img
           src={content.pages[page]}
+          loading="eager"
+          decoding="async"
           style={{
             width: "100%",
             maxHeight: "75vh",

@@ -21,17 +21,19 @@ model User {
 }
 
 model Comic {
-  id          String     @id @default(uuid())
-  title       String
-  description String
-  price       Float
-  imageUrl    String
-  createdAt   DateTime   @default(now())
-  pages       Json?
-  purchases   Purchase[]
-  reviews     Review[]
-  comments    Comment[]
+  id           String     @id @default(uuid())
+  title        String
+  description  String
+  price        Float
+  imageUrl     String
+  createdAt    DateTime   @default(now())
+  pages        Json?
+  purchases    Purchase[]
+  reviews      Review[]
+  comments     Comment[]
   previewPages Json?
+
+  isPublished  Boolean    @default(false)
 }
 
 model Purchase {

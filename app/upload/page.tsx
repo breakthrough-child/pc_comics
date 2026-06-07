@@ -16,6 +16,9 @@ export default function UploadPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [previewIndexes, setPreviewIndexes] = useState<number[]>([]);
   const [sendNewsletter, setSendNewsletter] = useState(false);
+  const [comicId, setComicId] = useState<string | null>(null);
+  const [allUploadedPages, setAllUploadedPages] = useState<string[]>([]);
+  const [published, setPublished] = useState(false);
 
   useEffect(() => {
   async function checkAdmin() {
@@ -132,6 +135,11 @@ for (const file of Array.from(files || [])) {
     });
 
     const data = await res.json();
+    if (res.ok) {
+      setComicId(data.comic.id);
+
+      setAllUploadedPages(uploadedPages);
+    }
 
     if (res.ok && sendNewsletter) {
       await fetch("/api/newsletter/send", {
@@ -147,17 +155,135 @@ for (const file of Array.from(files || [])) {
     alert(data.message || data.error);
 
     // RESET FORM STATE AFTER SUCCESS
-    setTitle("");
-    setDescription("");
-    setPrice("");
-    setImageUrl("");
-    setFiles(null);
-    setCoverFile(null);
+    // setTitle("");
+    // setDescription("");
+    // setPrice("");
+    // setImageUrl("");
+    // setFiles(null);
+    // setCoverFile(null);
     fileInputRef.current && (fileInputRef.current.value = "");
 
     setLoading(false);
   }
 
+  async function uploadMorePages() {
+  if (!comicId) {
+    alert("Create comic first");
+    return;
+  }
+
+  if (!files || files.length === 0) {
+    alert("Select pages");
+    return;
+  }
+
+  setLoading(true);
+
+  const uploadedPages: string[] = [];
+
+  for (const file of Array.from(files)) {
+    const formData = new FormData();
+
+    formData.append("files", file);
+
+    const uploadRes = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const uploadData = await uploadRes.json();
+
+    if (!uploadRes.ok) {
+      alert(uploadData.error || "Upload failed");
+      setLoading(false);
+      return;
+    }
+
+    uploadedPages.push(uploadData.pages[0]);
+  }
+
+  const res = await fetch(
+    `/api/comics/${comicId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        appendPages: uploadedPages,
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setAllUploadedPages((prev) => [
+      ...prev,
+      ...uploadedPages,
+    ]);
+  }
+
+  alert(
+    data.message ||
+      `Batch uploaded (${uploadedPages.length} pages)`
+  );
+
+  setLoading(false);
+
+}
+
+
+
+async function publishComic() {
+  if (!comicId) {
+    alert("Create comic first");
+    return;
+  }
+
+  setLoading(true);
+
+  const res = await fetch(
+    `/api/comics/${comicId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        isPublished: true,
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (res.ok) {
+  setPublished(true);
+
+  setTitle("");
+  setDescription("");
+  setPrice("");
+  setImageUrl("");
+  setFiles(null);
+  setCoverFile(null);
+  setComicId(null);
+  setAllUploadedPages([]);
+  setPreviewIndexes([]);
+
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+  }
+}
+
+alert(
+  data.message || "Comic published successfully"
+);
+
+setLoading(false);
+}
 
   const inputStyle: React.CSSProperties = {
   padding: "12px",
@@ -181,7 +307,6 @@ const labelStyle: React.CSSProperties = {
   opacity: 0.7,
   marginTop: 6,
 };
-
 
   return (
   <div
@@ -277,7 +402,6 @@ const labelStyle: React.CSSProperties = {
             >
               {Array.from(files).map((file, i) => (
 
-                
                 <div
   key={i}
   onClick={() => {
@@ -313,6 +437,7 @@ const labelStyle: React.CSSProperties = {
         )}
 
         {/* BUTTON */}
+        {!comicId && (
         <button
           onClick={submit}
           disabled={loading}
@@ -332,6 +457,86 @@ const labelStyle: React.CSSProperties = {
         >
           {loading ? "Uploading..." : "Upload Comic"}
         </button>
+        )}
+
+        {allUploadedPages.length > 0 && (
+  <div style={{ marginTop: 20 }}>
+    <h3
+      style={{
+        fontSize: 14,
+        opacity: 0.8,
+        marginBottom: 10,
+      }}
+    >
+      Uploaded Pages ({allUploadedPages.length})
+    </h3>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "repeat(auto-fill, minmax(80px, 1fr))",
+        gap: 8,
+        maxHeight: 300,
+        overflowY: "auto",
+      }}
+    >
+      {allUploadedPages.map((url, i) => (
+        <img
+          key={i}
+          src={url}
+          alt={`Page ${i + 1}`}
+          style={{
+            width: "100%",
+            height: 80,
+            objectFit: "cover",
+            borderRadius: 8,
+          }}
+        />
+      ))}
+    </div>
+  </div>
+)}
+
+        {comicId && (
+          <>
+            <button
+              onClick={uploadMorePages}
+              disabled={loading}
+              style={{
+                marginTop: 10,
+                padding: "12px",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "bold",
+                background: "#444",
+                color: "#fff",
+              }}
+            >
+              {loading ? "Uploading..." : "Upload Additional Batch"}
+            </button>
+
+            <button
+              onClick={publishComic}
+              disabled={loading}
+              style={{
+                marginTop: 10,
+                padding: "12px",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "bold",
+                background: loading
+                ? "#999"
+                : "linear-gradient(90deg, #ff4da6, #ff85c1)",
+                color: "#fff",
+              }}
+            >
+              Publish Comic
+            </button>
+          </>
+        )}
 
         <label style={{ fontSize: 12 }}>
           <input

@@ -18,16 +18,47 @@ export async function PATCH(
     );
   }
 
-  const { title, description, price, imageUrl, pages } = await req.json();
+  const { title, description, price, imageUrl, pages, appendPages, isPublished } = await req.json();
+
+  const existingComic = await prisma.comic.findUnique({
+    where: { id },
+  });
+
+  if (!existingComic) {
+    return NextResponse.json(
+      { error: "Comic not found" },
+      { status: 404 }
+    );
+  }
+
+  let updatedPages = existingComic.pages;
+
+  if (Array.isArray(appendPages)) {
+    updatedPages = [
+      ...(Array.isArray(existingComic.pages)
+        ? existingComic.pages
+        : []),
+      ...appendPages,
+    ];
+  } else if (Array.isArray(pages)) {
+    updatedPages = pages;
+  }
 
   const updated = await prisma.comic.update({
-    where: { id, },
+    where: { id },
     data: {
-    title,
-    description,
-    price,
-    imageUrl,
-    ...(Array.isArray(pages) && { pages }),
+      ...(title !== undefined && { title }),
+      ...(description !== undefined && { description }),
+      ...(price !== undefined && { price }),
+      ...(imageUrl !== undefined && { imageUrl }),
+
+      ...(updatedPages !== undefined && {
+        pages: updatedPages,
+      }),
+
+      ...(isPublished !== undefined && {
+        isPublished,
+      }),
     },
   });
 

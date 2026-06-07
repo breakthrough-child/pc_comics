@@ -6,12 +6,20 @@ export async function GET(req: Request) {
 
 const user = getUserFromToken(req);
 const userId = user?.userId || null;
+const role = user?.role;
 
     try {
     const comics = await prisma.comic.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
+  where:
+    role === "ADMIN"
+      ? {}
+      : {
+          isPublished: true,
+        },
+
+  orderBy: {
+    createdAt: "desc",
+  },
 select: {
   id: true,
   title: true,
@@ -114,6 +122,7 @@ if (
         imageUrl,
         pages,
         previewPages: previewPages ?? pages.slice(0, 3),
+        isPublished: false,
       },
     });
 
