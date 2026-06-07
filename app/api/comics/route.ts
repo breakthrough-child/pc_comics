@@ -43,12 +43,15 @@ select: {
   },
 },
     });
-    
 
-    const formatted = comics.map((comic) => {
+
+    const formatted = comics.map((comic: any) => {
   const avgRating =
     comic.reviews.length > 0
-      ? comic.reviews.reduce((a, r) => a + r.rating, 0) /
+      ? comic.reviews.reduce(
+  (a: number, r: any) => a + r.rating,
+  0
+) /
         comic.reviews.length
       : 0;
 
