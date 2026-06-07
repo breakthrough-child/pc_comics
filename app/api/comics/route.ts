@@ -43,6 +43,7 @@ select: {
   },
 },
     });
+    
 
     const formatted = comics.map((comic) => {
   const avgRating =
