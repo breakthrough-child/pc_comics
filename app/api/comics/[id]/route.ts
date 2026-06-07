@@ -47,19 +47,24 @@ export async function PATCH(
   const updated = await prisma.comic.update({
     where: { id },
     data: {
-      ...(title !== undefined && { title }),
-      ...(description !== undefined && { description }),
-      ...(price !== undefined && { price }),
-      ...(imageUrl !== undefined && { imageUrl }),
+  ...(title !== undefined ? { title } : {}),
+  ...(description !== undefined ? { description } : {}),
+  ...(price !== undefined ? { price } : {}),
+  ...(imageUrl !== undefined ? { imageUrl } : {}),
 
-      ...(updatedPages !== undefined && {
-        pages: updatedPages,
-      }),
+  ...(Array.isArray(updatedPages)
+    ? {
+        pages: updatedPages as any,
+      }
+    : {}),
 
-      ...(isPublished !== undefined && {
+  ...(typeof isPublished === "boolean"
+    ? {
         isPublished,
-      }),
-    },
+      }
+    : {}),
+},
+
   });
 
   return NextResponse.json({
