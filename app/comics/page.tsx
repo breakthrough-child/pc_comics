@@ -242,6 +242,10 @@ async function logout() {
         .comics-btn {
           width: 100%;
         }
+
+        .header-actions {
+          display: none !important;
+        }
       }
     `}</style>
     
@@ -258,7 +262,10 @@ async function logout() {
     💖PC Comics💖 
   </h1>
 
-  <div style={{ display: "flex", gap: 10 }}>
+  <div
+    className="header-actions"
+    style={{ display: "flex", gap: 10 }}
+  >
     {!user?.userId ? (
       <>
         <a href="/login">
@@ -300,7 +307,7 @@ async function logout() {
                 padding: "8px 14px",
                 borderRadius: 8,
                 border: "none",
-                background: "#ffd6ec",
+                background: "#fca6d1",
                 color: "var(--text)",
                 cursor: "pointer",
               }}
@@ -317,7 +324,7 @@ async function logout() {
             borderRadius: 8,
             border: "none",
             background: "#2b2b2b",
-            color: "var(--text)",
+            color: "#fff",
             cursor: "pointer",
           }}
         >
