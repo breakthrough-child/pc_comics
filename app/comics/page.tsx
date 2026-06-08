@@ -258,9 +258,15 @@ async function logout() {
     marginBottom: 30,
   }}
 >
-  <h1 style={{ fontSize: 28, fontWeight: 800 }}>
-    💖PC Comics💖 
-  </h1>
+  <img
+  src="/pclogo.png"
+  alt="PC Comics"
+  style={{
+    height: 200,
+    width: "auto",
+    objectFit: "contain",
+  }}
+/>
 
   <div
     className="header-actions"

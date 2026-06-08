@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Premium Comics Platform",
+  title: "PC Comics",
   description: "Discover and read amazing premium comics",
 
   openGraph: {
