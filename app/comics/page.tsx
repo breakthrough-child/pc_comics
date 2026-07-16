@@ -664,6 +664,85 @@ async function logout() {
 )}
 
 
+
+<div
+  style={{
+    marginTop: 200,
+    paddingTop: 30,
+    borderTop: "1px solid rgba(255,255,255,0.12)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 12,
+    textAlign: "center",
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: "10px 18px",
+      fontSize: 14,
+    }}
+  >
+    <a
+      href="/terms"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      Terms & Conditions
+    </a>
+
+    <a
+      href="/privacy"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      Privacy Policy
+    </a>
+
+    <a
+      href="/refund-policy"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      Refund Policy
+    </a>
+
+    <a
+      href="/contact"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      Contact
+    </a>
+  </div>
+
+  <div
+    style={{
+      fontSize: 12,
+      opacity: 0.55,
+      color: "var(--text)",
+    }}
+  >
+    © 2026 ComicVerse. All rights reserved.
+  </div>
+</div>
+
+
 <ComicPreviewModal
   comic={selectedComic}
   open={!!selectedComic}
@@ -766,11 +845,6 @@ async function logout() {
     </button>
   </div>
 </div>
-
-
-
-
-
 
   </div>
 );

@@ -8,9 +8,17 @@ export default function RegisterPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!agreed) {
+  alert(
+    "You must agree to the Terms & Conditions, Privacy Policy, and Refund Policy before creating an account."
+  );
+  return;
+}
 
     const res = await fetch("/api/auth/register", {
       method: "POST",
@@ -93,18 +101,71 @@ export default function RegisterPage() {
           }}
         />
 
+
+        <label
+  style={{
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 10,
+    fontSize: 13,
+    lineHeight: 1.5,
+    marginTop: 4,
+    cursor: "pointer",
+  }}
+>
+  <input
+    type="checkbox"
+    checked={agreed}
+    onChange={(e) => setAgreed(e.target.checked)}
+    style={{ marginTop: 3 }}
+  />
+
+  <span>
+    I have read and agree to the{" "}
+    <a
+      href="/terms"
+      target="_blank"
+      style={{ color: "#ff4da6", textDecoration: "underline" }}
+    >
+      Terms & Conditions
+    </a>
+    ,{" "}
+    <a
+      href="/privacy"
+      target="_blank"
+      style={{ color: "#ff4da6", textDecoration: "underline" }}
+    >
+      Privacy Policy
+    </a>{" "}
+    and{" "}
+    <a
+      href="/refund-policy"
+      target="_blank"
+      style={{ color: "#ff4da6", textDecoration: "underline" }}
+    >
+      Refund Policy
+    </a>
+    .
+  </span>
+</label>
+
+
         <button
-          type="submit"
+  type="submit"
+  disabled={!agreed}
           style={{
             marginTop: 10,
             padding: "12px",
             borderRadius: 10,
             border: "none",
-            cursor: "pointer",
+            cursor: agreed ? "pointer" : "not-allowed",
             fontWeight: "bold",
             background: "linear-gradient(90deg, #ff4da6, #ff85c1)",
             color: "#fff",
-            boxShadow: "0 10px 25px rgba(255,77,166,0.3)",
+            boxShadow: agreed
+  ? "0 10px 25px rgba(255,77,166,0.3)"
+  : "none",
+opacity: agreed ? 1 : 0.6,
             transition: "transform 0.2s ease",
           }}
           onMouseDown={(e) =>
