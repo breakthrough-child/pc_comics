@@ -9,33 +9,53 @@ export async function GET(
   try {
     const token = req.headers.get("cookie")?.split("token=")[1];
 
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+let userId: string | null = null;
 
-    const { userId } = verifyToken(token);
+if (token) {
+  try {
+    const payload = verifyToken(token);
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (payload?.userId) {
+      userId = payload.userId;
     }
+  } catch {
+    // Invalid token. Continue as guest.
+  }
+}
 
     const { id } = await context.params;
 
-const purchase = await prisma.purchase.findUnique({
-  where: {
-    userId_comicId: {
-      userId,
-      comicId: id,
-    },
-  },
-});
+    const FREE_COMIC_IDS = [
+  "0df75db3-6d94-4cfd-aea3-4f739081ab8f",
+  "fccf9709-8be0-4d5d-96ab-1c609fcee7ee",
+];
 
-    if (!purchase) {
-      return NextResponse.json(
-        { error: "Not purchased" },
-        { status: 403 }
-      );
-    }
+const isFreeComic = FREE_COMIC_IDS.includes(id);
+
+if (!isFreeComic) {
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const purchase = await prisma.purchase.findUnique({
+    where: {
+      userId_comicId: {
+        userId,
+        comicId: id,
+      },
+    },
+  });
+
+  if (!purchase) {
+    return NextResponse.json(
+      { error: "Not purchased" },
+      { status: 403 }
+    );
+  }
+}
 
     const comic = await prisma.comic.findUnique({
   where: { id },

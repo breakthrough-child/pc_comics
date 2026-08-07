@@ -687,6 +687,39 @@ async function logout() {
     }}
   >
     <a
+      href="/about"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      About us
+    </a>
+
+    <a
+      href="/contact"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      Contact
+    </a>
+
+    <a
+      href="/faq"
+      style={{
+        color: "var(--text)",
+        textDecoration: "none",
+        opacity: 0.85,
+      }}
+    >
+      FAQ
+    </a>
+
+    <a
       href="/terms"
       style={{
         color: "var(--text)",
@@ -719,16 +752,7 @@ async function logout() {
       Refund Policy
     </a>
 
-    <a
-      href="/contact"
-      style={{
-        color: "var(--text)",
-        textDecoration: "none",
-        opacity: 0.85,
-      }}
-    >
-      Contact
-    </a>
+    
   </div>
 
   <div

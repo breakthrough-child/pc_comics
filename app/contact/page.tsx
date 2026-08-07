@@ -24,15 +24,18 @@ export default function ContactPage() {
       </h1>
 
       <p
-        style={{
-          opacity: 0.75,
-          marginBottom: 40,
-          lineHeight: 1.7,
-        }}
-      >
-        If you have any questions, need support, or experience any issues with
-        your purchases, we're happy to help.
-      </p>
+  style={{
+    opacity: 0.75,
+    marginBottom: 40,
+    lineHeight: 1.8,
+  }}
+>
+  PC Comics is an online platform that offers digital comics for readers around
+  the world. Customers can browse our collection, securely purchase digital
+  comics, and enjoy instant access to their purchases through their accounts.
+  If you have questions about your account, purchases, or our services, our
+  support team is here to assist you.
+</p>
 
       <div
         style={{
@@ -65,6 +68,49 @@ export default function ContactPage() {
           9:00 AM – 5:00 PM (WAT)
         </p>
       </div>
+<div
+  style={{
+    marginTop: 30,
+    background: "rgba(255,255,255,0.06)",
+    backdropFilter: "blur(12px)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 16,
+    padding: 24,
+    lineHeight: 1.9,
+  }}
+>
+  <h2
+    style={{
+      marginTop: 0,
+      marginBottom: 20,
+      fontSize: 24,
+    }}
+  >
+    About Our Business
+  </h2>
+
+  <p>
+    <strong>Business Name:</strong> PC Comics
+  </p>
+
+  <p>
+    <strong>Business Type:</strong> Online Digital Comic Store
+  </p>
+
+  <p>
+    <strong>Services:</strong> We publish and sell digital comics that customers
+    can purchase and read online through their accounts.
+  </p>
+
+  <p>
+    <strong>Delivery:</strong> Purchased comics become available digitally after
+    successful payment. No physical products are shipped.
+  </p>
+
+  <p>
+    <strong>Payments:</strong> Payments are securely processed through Paystack.
+  </p>
+</div>
 
       <p
         style={{
