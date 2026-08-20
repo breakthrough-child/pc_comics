@@ -142,7 +142,7 @@ useEffect(() => {
 
 
 async function buyComic(id: string) {
-  const res = await fetch("/api/stripe/checkout", {
+  const res = await fetch("/api/paystack/checkout", {
     method: "POST",
     credentials: "include",
     headers: {
@@ -154,15 +154,15 @@ async function buyComic(id: string) {
   const data = await res.json();
 
   if (res.status === 401) {
-      window.location.href = "/login";
-      return;
-    }
+    window.location.href = "/login";
+    return;
+  }
 
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert(data.error);
-    }
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    alert(data.error || "Unable to start payment");
+  }
 }
 
 
