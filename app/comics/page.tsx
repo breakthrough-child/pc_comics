@@ -458,7 +458,7 @@ async function logout() {
           fontWeight: 600,
         }}
       >
-        ${comic.price}
+        ₦{comic.price}
       </div>
     </div>
 
