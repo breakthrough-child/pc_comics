@@ -356,7 +356,7 @@ const labelStyle: React.CSSProperties = {
         />
 
         <input
-          placeholder="Price"
+          placeholder="Price in ₦"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           style={inputStyle}
