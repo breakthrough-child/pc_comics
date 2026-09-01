@@ -1,0 +1,441 @@
+New chat detected.. initializing **new project mode**.
+
+Yes. We should build the **Written Stories** feature alongside the existing Comics system without disturbing the comic functionality. I recommend doing it in small, isolated steps so you can paste each file/update, test it, and then move to the next.
+
+## 🗺️ Roadmap
+
+### **Phase 1 — Database**
+
+**Modify:**
+
+```text
+prisma/schema.prisma
+```
+
+Add a new `Story` model and its supporting content structure.
+
+The story will support:
+
+* Title
+* Subtitle
+* Description/excerpt
+* Cover image
+* Price
+* Rich written content
+* Images embedded between sections
+* Links
+* Colored text
+* Headings
+* Bold/italic/underline
+* Lists
+* Quotes
+* Published/unpublished status
+* Created/updated dates
+* Purchases
+
+**Important:** We will **not modify or remove the existing Comic, Purchase, Review, Comment, or Like models unnecessarily.**
+
+Then we'll run the Prisma migration.
+
+---
+
+# **Phase 2 — Story API**
+
+Create:
+
+```text
+app/api/stories/route.ts
+```
+
+This will handle:
+
+* `GET` → fetch stories
+* `POST` → admin creates a story
+
+Create:
+
+```text
+app/api/stories/[id]/route.ts
+```
+
+This will handle:
+
+* `PATCH` → edit story
+* `DELETE` → delete story
+* publishing/unpublishing
+* updating story content
+
+This will mirror the architecture of your existing:
+
+```text
+app/api/comics/route.ts
+app/api/comics/[id]/route.ts
+```
+
+but won't touch them.
+
+---
+
+# **Phase 3 — Story Image Upload**
+
+Your existing upload system can probably be reused.
+
+Instead of creating an entirely separate image-storage mechanism, we'll determine whether:
+
+```text
+app/api/upload/route.ts
+```
+
+can safely handle story images.
+
+If it already accepts arbitrary images, **we won't duplicate it**.
+
+The story editor will upload an image and receive its URL, which gets inserted into the story content.
+
+---
+
+# **Phase 4 — Rich Story Editor**
+
+Create something like:
+
+```text
+app/components/StoryEditor.tsx
+```
+
+This will be the main writing interface.
+
+The editor should support:
+
+### Text
+
+* Normal paragraph
+* Heading 1
+* Heading 2
+* Heading 3
+* Bold
+* Italic
+* Underline
+* Strikethrough
+* Text color
+* Highlight/background color
+* Font sizing
+
+### Structure
+
+* Bullet lists
+* Numbered lists
+* Blockquotes
+* Horizontal separators
+* Alignment
+
+### Media
+
+* Upload image
+* Insert image between paragraphs
+* Image captions
+* Image alignment
+* Image sizing
+
+### Links
+
+* Insert hyperlink
+* Link text
+* Open in new tab
+
+### Story-specific
+
+* Title
+* Subtitle
+* Cover image
+* Story excerpt
+* Main content
+* Preview
+* Publish
+
+---
+
+# **Phase 5 — Story Upload/Admin Page**
+
+Create:
+
+```text
+app/upload-story/page.tsx
+```
+
+This will be the equivalent of:
+
+```text
+app/upload/page.tsx
+```
+
+but instead of uploading comic pages, the admin gets the story editor.
+
+The flow becomes:
+
+```text
+Title
+↓
+Subtitle
+↓
+Description
+↓
+Cover Image
+↓
+Rich Story Editor
+↓
+Price
+↓
+Save Draft
+↓
+Publish
+```
+
+We can also add:
+
+**Preview Story** before publishing.
+
+---
+
+# **Phase 6 — Stories Listing Page**
+
+Create:
+
+```text
+app/stories/page.tsx
+```
+
+This will be the written-story equivalent of:
+
+```text
+app/comics/page.tsx
+```
+
+It will display story cards containing things such as:
+
+```text
+┌──────────────────────────┐
+│       COVER IMAGE        │
+│                          │
+├──────────────────────────┤
+│ Story Title              │
+│ Subtitle                 │
+│ Short description...     │
+│                          │
+│ ₦2,000          [Read]   │
+└──────────────────────────┘
+```
+
+For an unpaid story:
+
+**Buy**
+
+For a purchased story:
+
+**Read**
+
+For an admin:
+
+**Edit / Delete / Publish**
+
+---
+
+# **Phase 7 — Individual Story Reader**
+
+Create:
+
+```text
+app/stories/[id]/page.tsx
+```
+
+This is where the actual story will be read.
+
+It should look much more like a proper article/book than a comic page.
+
+For example:
+
+```text
+                THE LAST SIGNAL
+
+              A story by PulsR
+
+        ─────────────────────────
+
+        Chapter One
+
+        The rain had started before...
+
+        [IMAGE]
+
+        The city was completely silent...
+
+        "We need to leave."
+
+        ─────────────────────────
+
+        Chapter Two
+```
+
+Images inserted through the editor will appear **exactly where they were placed in the story**.
+
+---
+
+# **Phase 8 — Story Purchases**
+
+Since your existing comics have:
+
+```text
+Purchase
+```
+
+we need to decide whether stories should have their **own purchase relationship**.
+
+I recommend creating:
+
+```text
+StoryPurchase
+```
+
+rather than forcing comics and stories into the same purchase table.
+
+That keeps the existing comic payment system safe.
+
+The structure becomes:
+
+```text
+User
+ ├── Comic Purchases
+ └── Story Purchases
+```
+
+Then:
+
+```text
+Story
+ └── StoryPurchase
+```
+
+---
+
+# **Phase 9 — Paystack for Stories**
+
+You already moved the platform to Paystack.
+
+We'll create:
+
+```text
+app/api/paystack/story-checkout/route.ts
+```
+
+and, depending on the implementation we settle on:
+
+```text
+app/api/paystack/story-callback/route.ts
+```
+
+and/or update the existing Paystack webhook to recognize story purchases.
+
+The metadata can distinguish:
+
+```text
+type = "comic"
+```
+
+versus:
+
+```text
+type = "story"
+```
+
+so your existing payment system doesn't get confused.
+
+---
+
+# **Phase 10 — Navigation**
+
+Finally we'll modify the existing navigation/header to have:
+
+```text
+Comics
+Stories
+```
+
+For example:
+
+```text
+Home | Comics | Stories | About
+```
+
+---
+
+# 📁 Final expected structure
+
+After everything is complete, the relevant additions should look roughly like:
+
+```text
+prisma/
+└── schema.prisma
+
+app/
+├── api/
+│   ├── comics/
+│   │   ├── route.ts
+│   │   └── [id]/
+│   │       └── route.ts
+│   │
+│   ├── stories/
+│   │   ├── route.ts
+│   │   └── [id]/
+│   │       └── route.ts
+│   │
+│   └── paystack/
+│       ├── checkout/
+│       ├── callback/
+│       └── webhook/
+│
+├── comics/
+│   └── page.tsx
+│
+├── stories/
+│   ├── page.tsx
+│   └── [id]/
+│       └── page.tsx
+│
+├── upload/
+│   └── page.tsx
+│
+├── upload-story/
+│   └── page.tsx
+│
+└── components/
+    └── StoryEditor.tsx
+```
+
+### Recommended order
+
+We should **not start creating all these files at once**.
+
+We'll do:
+
+**1. `schema.prisma`**
+↓
+**2. Prisma migration**
+↓
+**3. `app/api/stories/route.ts`**
+↓
+**4. `app/api/stories/[id]/route.ts`**
+↓
+**5. Story editor**
+↓
+**6. Story upload page**
+↓
+**7. Stories listing**
+↓
+**8. Story reader**
+↓
+**9. Paystack integration**
+↓
+**10. Navigation + final testing**
+
+That way, if something breaks, we'll know **exactly which step caused it**, instead of changing your entire application at once.
+
+**Next file: `prisma/schema.prisma`.** When you're ready, paste the current version and we'll make only the required additions.

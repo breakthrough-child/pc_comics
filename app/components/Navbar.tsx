@@ -10,6 +10,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showUploadChoice, setShowUploadChoice] = useState(false);
 
     useEffect(() => {
     const saved = localStorage.getItem("theme") as "light" | "dark";
@@ -403,22 +404,23 @@ padding: "12px",
     ) : (
       <>
         {role === "ADMIN" && (
-          <a href="/upload">
-            <button
-              style={{
-                width: "100%",
-padding: "12px",
-                borderRadius: 8,
-                border: "none",
-                background: "#fca6d1",
-                color: "var(--text)",
-                cursor: "pointer",
-              }}
-            >
-              Upload
-            </button>
-          </a>
-        )}
+  <button
+    type="button"
+    onClick={() => setShowUploadChoice(true)}
+    style={{
+      width: "100%",
+      padding: "12px",
+      borderRadius: 8,
+      border: "none",
+      background: "#fca6d1",
+      color: "var(--text)",
+      cursor: "pointer",
+      fontWeight: 600,
+    }}
+  >
+    Upload
+  </button>
+)}
 
         <button
           onClick={logout}
@@ -610,6 +612,152 @@ padding: "12px",
     </button>
   </div>
 )}
+
+    {/* ADMIN UPLOAD CHOICE MODAL */}
+    {role === "ADMIN" && showUploadChoice && (
+      <div
+        onClick={() => setShowUploadChoice(false)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.65)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: 20,
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: "100%",
+            maxWidth: 420,
+            background: "var(--card-bg)",
+            color: "var(--text)",
+            borderRadius: 18,
+            padding: 24,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 800,
+              }}
+            >
+              Upload
+            </h2>
+
+            <button
+              type="button"
+              onClick={() => setShowUploadChoice(false)}
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "var(--text)",
+                fontSize: 22,
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <p
+            style={{
+              margin: "0 0 20px",
+              opacity: 0.65,
+              fontSize: 14,
+            }}
+          >
+            What would you like to upload?
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setShowUploadChoice(false);
+                setMenuOpen(false);
+                router.push("/upload");
+              }}
+              style={{
+                width: "100%",
+                padding: "14px 16px",
+                borderRadius: 12,
+                border: "none",
+                background:
+                  "linear-gradient(90deg, #ff4da6, #ff85c1)",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: 15,
+                fontWeight: 700,
+              }}
+            >
+              Upload Comic
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowUploadChoice(false);
+                setMenuOpen(false);
+                router.push("/upload-story");
+              }}
+              style={{
+                width: "100%",
+                padding: "14px 16px",
+                borderRadius: 12,
+                border: "none",
+                background:
+                  "linear-gradient(90deg, #00c6ff, #0072ff)",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: 15,
+                fontWeight: 700,
+              }}
+            >
+              Upload Story
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowUploadChoice(false)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                background: "rgba(100,100,100,0.25)",
+                color: "var(--text)",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
   </>
   );
 }

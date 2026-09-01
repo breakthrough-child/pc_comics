@@ -9,15 +9,16 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String
-  createdAt DateTime   @default(now())
-  role      String     @default("USER")
-  purchases Purchase[]
-  reviews   Review[]
-  comments Comment[]
-  likes    Like[]
+  id             String          @id @default(uuid())
+  email          String          @unique
+  password       String
+  createdAt      DateTime        @default(now())
+  role           String          @default("USER")
+  comments       Comment[]
+  likes          Like[]
+  purchases      Purchase[]
+  reviews        Review[]
+  storyPurchases StoryPurchase[]
 }
 
 model Comic {
@@ -28,12 +29,11 @@ model Comic {
   imageUrl     String
   createdAt    DateTime   @default(now())
   pages        Json?
+  previewPages Json?
+  isPublished  Boolean    @default(false)
+  comments     Comment[]
   purchases    Purchase[]
   reviews      Review[]
-  comments     Comment[]
-  previewPages Json?
-
-  isPublished  Boolean    @default(false)
 }
 
 model Purchase {
@@ -50,58 +50,88 @@ model Purchase {
 model Newsletter {
   id        String   @id @default(uuid())
   email     String   @unique
-  name      String?  // 👈 ADD THIS LINE
   createdAt DateTime @default(now())
+  name      String?
 }
 
 model Review {
   id        String   @id @default(uuid())
   userId    String
-  comicId   String
+  comicId   String?
+  storyId   String?
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
 
-  comic     Comic @relation(fields: [comicId], references: [id])
-  user      User  @relation(fields: [userId], references: [id])
+  comic     Comic?   @relation(fields: [comicId], references: [id])
+  story     Story?   @relation(fields: [storyId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, comicId])
+  @@unique([userId, storyId])
+  @@index([comicId])
+  @@index([storyId])
 }
-
 
 model Comment {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  comicId   String
+  comicId   String?
+  storyId   String?
   text      String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  parentId  String?
 
-  // 🔥 SELF-RELATION (REPLIES SYSTEM)
-  parentId String?
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
+  comic     Comic?    @relation(fields: [comicId], references: [id])
+  story     Story?    @relation(fields: [storyId], references: [id])
 
-  // RELATIONS
-  user  User  @relation(fields: [userId], references: [id])
-  comic Comic @relation(fields: [comicId], references: [id])
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
 
-  // LIKES
-  likes Like[]
+  user      User      @relation(fields: [userId], references: [id])
+  likes     Like[]
 
   @@index([comicId])
+  @@index([storyId])
+  @@index([parentId])
 }
-
 
 model Like {
   id        String   @id @default(uuid())
   userId    String
   commentId String
-
-  user      User     @relation(fields: [userId], references: [id])
-  comment   Comment  @relation(fields: [commentId], references: [id])
-
   createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, commentId])
   @@index([commentId])
+}
+
+model Story {
+  id          String          @id @default(uuid())
+  title       String
+  subtitle    String?
+  description String?
+  coverImage  String?
+  price       Float           @default(0)
+  content     Json
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  isPublished Boolean         @default(false)
+
+  purchases   StoryPurchase[]
+  reviews     Review[]
+  comments    Comment[]
+}
+
+model StoryPurchase {
+  id        String   @id @default(uuid())
+  userId    String
+  storyId   String
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, storyId])
 }

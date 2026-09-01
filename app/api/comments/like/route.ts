@@ -75,7 +75,7 @@ try {
             await sendEmail({
                 to: email,
                 subject: "❤️ Someone liked your comment",
-                text: "A user liked your comment on a comic.",
+                text: "A user liked your comment.",
             });
             } catch (e) {
             console.error("Email failed:", e);
