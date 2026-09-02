@@ -69,22 +69,8 @@ export async function POST(req: Request) {
     // Paystack should only grant access for successful payments
     if (transaction.status !== "success") {
       console.log("⚠️ Transaction was not successful");
+
       return NextResponse.json({ received: true });
-    }
-
-    const userId = transaction.metadata?.userId;
-    const comicId = transaction.metadata?.comicId;
-
-    if (!userId || !comicId) {
-      console.error("❌ Missing Paystack metadata", {
-        userId,
-        comicId,
-      });
-
-      return NextResponse.json(
-        { error: "Missing metadata" },
-        { status: 400 }
-      );
     }
 
     // Verify the transaction directly with Paystack
@@ -105,7 +91,10 @@ export async function POST(req: Request) {
     const verifyData = await verifyResponse.json();
 
     if (!verifyResponse.ok || !verifyData.status) {
-      console.error("❌ Paystack transaction verification failed", verifyData);
+      console.error(
+        "❌ Paystack transaction verification failed",
+        verifyData
+      );
 
       return NextResponse.json(
         { error: "Transaction verification failed" },
@@ -125,6 +114,116 @@ export async function POST(req: Request) {
     }
 
     console.log("✅ PAYSTACK PAYMENT VERIFIED");
+
+    /*
+     * STORY PAYMENT
+     *
+     * Story checkout sends:
+     *
+     * metadata: {
+     *   type: "story",
+     *   userId,
+     *   storyId
+     * }
+     *
+     * Story purchases are stored separately from comic purchases.
+     */
+    if (verifiedTransaction.metadata?.type === "story") {
+      const userId = verifiedTransaction.metadata?.userId;
+      const storyId = verifiedTransaction.metadata?.storyId;
+
+      if (!userId || !storyId) {
+        console.error("❌ Missing story Paystack metadata", {
+          userId,
+          storyId,
+        });
+
+        return NextResponse.json(
+          { error: "Missing story metadata" },
+          { status: 400 }
+        );
+      }
+
+      // Make sure the story exists before granting access.
+      const story = await prisma.story.findUnique({
+        where: {
+          id: String(storyId),
+        },
+      });
+
+      if (!story) {
+        console.error("❌ Story not found for Paystack payment:", storyId);
+
+        return NextResponse.json(
+          { error: "Story not found" },
+          { status: 404 }
+        );
+      }
+
+      // Prevent duplicate story purchases.
+      const existingStoryPurchase =
+        await prisma.storyPurchase.findUnique({
+          where: {
+            userId_storyId: {
+              userId: String(userId),
+              storyId: String(storyId),
+            },
+          },
+        });
+
+      if (existingStoryPurchase) {
+        console.log(
+          "ℹ️ Story purchase already exists:",
+          existingStoryPurchase.id
+        );
+
+        return NextResponse.json({
+          received: true,
+          alreadyPurchased: true,
+          storyPurchase: true,
+        });
+      }
+
+      // Create the story purchase.
+      const storyPurchase =
+        await prisma.storyPurchase.create({
+          data: {
+            userId: String(userId),
+            storyId: String(storyId),
+          },
+        });
+
+      console.log(
+        "🎉 STORY PURCHASE CREATED:",
+        storyPurchase
+      );
+
+      return NextResponse.json({
+        received: true,
+        purchaseCreated: true,
+        storyPurchase: true,
+      });
+    }
+
+    /*
+     * COMIC PAYMENT
+     *
+     * Existing comic purchase flow remains unchanged.
+     */
+    const userId = verifiedTransaction.metadata?.userId;
+    const comicId = verifiedTransaction.metadata?.comicId;
+
+    if (!userId || !comicId) {
+      console.error("❌ Missing Paystack metadata", {
+        userId,
+        comicId,
+      });
+
+      return NextResponse.json(
+        { error: "Missing metadata" },
+        { status: 400 }
+      );
+    }
 
     // Prevent duplicate purchases
     const existing = await prisma.purchase.findUnique({
