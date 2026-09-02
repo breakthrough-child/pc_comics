@@ -298,6 +298,32 @@ export default function Navbar() {
   Mine
 </>
   </button>
+
+  {/* STORIES */}
+  <button
+    onClick={() => {router.push("/stories"); setMenuOpen(false);}}
+    style={mobileNavBtn}
+  >
+    <>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ marginRight: 8 }}
+  >
+    {/* Beautiful, modern open book path */}
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+  </svg>
+  Books
+</>
+
+  </button>
 </div>
 
       {/* THEME */}
@@ -554,6 +580,36 @@ padding: "12px",
           </svg>
           Mine
         </>
+      </button>
+
+      <button
+        onClick={() => router.push("/stories")}
+        style={{
+    ...navBtn,
+    display: "flex",
+    alignItems: "center", // Perfectly centers the text vertically next to the SVG
+    justifyContent: "center" // Optional: Centers the content inside the button
+  }}
+
+      >
+        <>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ marginRight: 8 }}
+  >
+    {/* Beautiful, modern open book path */}
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+  </svg>
+  Books
+</>
       </button>
     </div>
 

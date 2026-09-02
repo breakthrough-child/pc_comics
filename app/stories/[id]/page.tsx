@@ -440,14 +440,14 @@ export default function StoryReaderPage() {
     if (!newComment.trim()) return;
 
     try {
-      const res = await fetch("/api/comments", {
+      const res = await fetch("/api/stories/comments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
         body: JSON.stringify({
-          comicId: storyId,
+          storyId,
           text: newComment.trim(),
           parentId: replyTo?.id || null,
         }),
