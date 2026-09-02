@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import StoryPreviewModal from "../components/StoryPreviewModal";
 
@@ -22,8 +22,8 @@ type Story = {
   avgRating?: number;
 };
 
-export default function StoriesPage() {
-  const router = useRouter();
+function StoriesPageContent() {
+    const router = useRouter();
   const searchParams = useSearchParams();
 
   const [stories, setStories] = useState<Story[]>([]);
@@ -883,5 +883,26 @@ position: "relative",
           }}
         />
       </div>
+  );
+}
+
+export default function StoriesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: "100vh",
+            padding: "40px 20px",
+            color: "var(--text)",
+            textAlign: "center",
+          }}
+        >
+          <p>Loading stories...</p>
+        </div>
+      }
+    >
+      <StoriesPageContent />
+    </Suspense>
   );
 }

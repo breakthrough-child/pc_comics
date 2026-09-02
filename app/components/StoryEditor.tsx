@@ -128,6 +128,11 @@ export default function StoryEditor({
         return;
       }
 
+            if (!editor) {
+        alert("Editor is not ready");
+        return;
+      }
+
       editor
         .chain()
         .focus()
@@ -156,7 +161,12 @@ export default function StoryEditor({
   }
 
   function addLink() {
-    const previousUrl = editor.getAttributes("link").href;
+  if (!editor) {
+    alert("Editor is not ready");
+    return;
+  }
+
+  const previousUrl = editor.getAttributes("link").href;
 
     const url = window.prompt(
       "Enter URL:",
@@ -187,32 +197,47 @@ export default function StoryEditor({
   }
 
   function setFontSize(size: string) {
-    editor
-      .chain()
-      .focus()
-      .setMark("textStyle", {
-        fontSize: size,
-      })
-      .run();
+  if (!editor) {
+    alert("Editor is not ready");
+    return;
   }
 
-  function setTextColor(color: string) {
-    editor
-      .chain()
-      .focus()
-      .setColor(color)
-      .run();
+  editor
+    .chain()
+    .focus()
+    .setMark("textStyle", {
+      fontSize: size,
+    })
+    .run();
+}
+
+function setTextColor(color: string) {
+  if (!editor) {
+    alert("Editor is not ready");
+    return;
   }
 
-  function setHighlight(color: string) {
-    editor
-      .chain()
-      .focus()
-      .toggleHighlight({
-        color,
-      })
-      .run();
+  editor
+    .chain()
+    .focus()
+    .setColor(color)
+    .run();
+}
+
+function setHighlight(color: string) {
+  if (!editor) {
+    alert("Editor is not ready");
+    return;
   }
+
+  editor
+    .chain()
+    .focus()
+    .toggleHighlight({
+      color,
+    })
+    .run();
+}
 
   const buttonStyle: React.CSSProperties = {
     border: "1px solid var(--input-border, rgba(0,0,0,0.15))",
