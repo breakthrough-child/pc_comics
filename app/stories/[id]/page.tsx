@@ -112,10 +112,11 @@ function renderNode(node: any, key: string | number): React.ReactNode {
         <p
           key={key}
           style={{
-            margin: "0 0 1.2em",
-            lineHeight: 1.85,
-            fontSize: 18,
-          }}
+  margin: "0 0 1.2em",
+  lineHeight: 1.85,
+  fontSize: "clamp(16px, 2.5vw, 18px)",
+  overflowWrap: "break-word",
+}}
         >
           {node.content?.map((child: any, index: number) =>
             renderNode(child, `${key}-${index}`)
@@ -127,25 +128,28 @@ function renderNode(node: any, key: string | number): React.ReactNode {
       const level = node.attrs?.level || 1;
 
       const headingStyles: Record<number, React.CSSProperties> = {
-        1: {
-          fontSize: 32,
-          lineHeight: 1.25,
-          margin: "1.8em 0 0.7em",
-          fontWeight: 800,
-        },
-        2: {
-          fontSize: 26,
-          lineHeight: 1.3,
-          margin: "1.6em 0 0.6em",
-          fontWeight: 750,
-        },
-        3: {
-          fontSize: 22,
-          lineHeight: 1.35,
-          margin: "1.4em 0 0.5em",
-          fontWeight: 700,
-        },
-      };
+  1: {
+    fontSize: "clamp(26px, 5vw, 32px)",
+    lineHeight: 1.25,
+    margin: "1.8em 0 0.7em",
+    fontWeight: 800,
+    overflowWrap: "break-word",
+  },
+  2: {
+    fontSize: "clamp(22px, 4.5vw, 26px)",
+    lineHeight: 1.3,
+    margin: "1.6em 0 0.6em",
+    fontWeight: 750,
+    overflowWrap: "break-word",
+  },
+  3: {
+    fontSize: "clamp(19px, 4vw, 22px)",
+    lineHeight: 1.35,
+    margin: "1.4em 0 0.5em",
+    fontWeight: 700,
+    overflowWrap: "break-word",
+  },
+};
 
       const style = headingStyles[level] || headingStyles[1];
 
@@ -184,7 +188,7 @@ function renderNode(node: any, key: string | number): React.ReactNode {
           key={key}
           style={{
             margin: "1.5em 0",
-            padding: "14px 20px",
+            padding: "12px clamp(12px, 4vw, 20px)",
             borderLeft: "4px solid #ff4da6",
             background: "rgba(255,77,166,0.08)",
             borderRadius: "0 8px 8px 0",
@@ -204,9 +208,10 @@ function renderNode(node: any, key: string | number): React.ReactNode {
           key={key}
           style={{
             margin: "1em 0",
-            paddingLeft: 30,
-            lineHeight: 1.8,
-            fontSize: 18,
+            fontSize: "clamp(16px, 2.5vw, 18px)",
+lineHeight: 1.8,
+paddingLeft: "clamp(20px, 5vw, 30px)",
+overflowWrap: "break-word",
           }}
         >
           {node.content?.map((child: any, index: number) =>
@@ -221,9 +226,10 @@ function renderNode(node: any, key: string | number): React.ReactNode {
           key={key}
           style={{
             margin: "1em 0",
-            paddingLeft: 30,
-            lineHeight: 1.8,
-            fontSize: 18,
+            fontSize: "clamp(16px, 2.5vw, 18px)",
+lineHeight: 1.8,
+paddingLeft: "clamp(20px, 5vw, 30px)",
+overflowWrap: "break-word",
           }}
         >
           {node.content?.map((child: any, index: number) =>
@@ -370,7 +376,7 @@ export default function StoryReaderPage() {
 
     async function loadComments() {
       try {
-        const res = await fetch(`/api/comments/${storyId}`, {
+        const res = await fetch(`/api/stories/comments/${storyId}`, {
           credentials: "include",
           cache: "no-store",
         });
@@ -418,7 +424,7 @@ export default function StoryReaderPage() {
     );
 
     try {
-      await fetch("/api/comments/like", {
+      await fetch("/api/stories/comments/like", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -615,7 +621,7 @@ export default function StoryReaderPage() {
       <div
         style={{
           minHeight: "100vh",
-          padding: "40px 20px",
+          padding: "clamp(24px, 6vw, 40px) clamp(14px, 5vw, 20px)",
           color: "var(--text)",
           fontFamily:
             "system-ui, sans-serif",
@@ -643,45 +649,49 @@ export default function StoryReaderPage() {
           )}
 
           <h1
-            style={{
-              fontSize: 42,
-              lineHeight: 1.15,
-              marginBottom: 10,
-              fontWeight: 850,
-            }}
-          >
+  style={{
+    fontSize: "clamp(30px, 7vw, 42px)",
+    lineHeight: 1.15,
+    marginBottom: 10,
+    fontWeight: 850,
+    overflowWrap: "break-word",
+  }}
+>
             {story.title}
           </h1>
 
           {story.subtitle && (
-            <p
-              style={{
-                fontSize: 20,
-                opacity: 0.65,
-                fontStyle: "italic",
-                marginBottom: 20,
-              }}
-            >
-              {story.subtitle}
-            </p>
-          )}
+  <p
+    style={{
+      fontSize: "clamp(17px, 4vw, 20px)",
+      lineHeight: 1.5,
+      opacity: 0.65,
+      fontStyle: "italic",
+      marginBottom: 20,
+      overflowWrap: "break-word",
+    }}
+  >
+    {story.subtitle}
+  </p>
+)}
 
           {story.description && (
-            <p
-              style={{
-                fontSize: 17,
-                lineHeight: 1.7,
-                opacity: 0.8,
-              }}
-            >
-              {story.description}
-            </p>
-          )}
+  <p
+    style={{
+      fontSize: "clamp(16px, 3vw, 17px)",
+      lineHeight: 1.7,
+      opacity: 0.8,
+      overflowWrap: "break-word",
+    }}
+  >
+    {story.description}
+  </p>
+)}
 
           <div
             style={{
               marginTop: 30,
-              padding: 24,
+              padding: "clamp(18px, 5vw, 24px)",
               borderRadius: 14,
               background:
                 "rgba(255,255,255,0.06)",
@@ -711,7 +721,8 @@ export default function StoryReaderPage() {
               disabled={buying}
               style={{
                 marginTop: 10,
-                padding: "13px 24px",
+                padding: "13px clamp(18px, 5vw, 24px)",
+maxWidth: "100%",
                 borderRadius: 10,
                 border: "none",
                 cursor: buying
@@ -738,33 +749,35 @@ export default function StoryReaderPage() {
 
   return (
     <div
-      style={{
-        minHeight: "100vh",
-        padding: "40px 20px 80px",
-        color: "var(--text)",
-        fontFamily:
-          "system-ui, sans-serif",
-      }}
-    >
+  style={{
+    minHeight: "100vh",
+    padding: "clamp(24px, 6vw, 40px) clamp(14px, 5vw, 20px) 80px",
+    color: "var(--text)",
+    fontFamily:
+      "system-ui, sans-serif",
+  }}
+>
       <article
-        style={{
-          maxWidth: 850,
-          margin: "0 auto",
-        }}
-      >
+  style={{
+    width: "100%",
+    maxWidth: 850,
+    margin: "0 auto",
+  }}
+>
         {/* COVER */}
         {story.coverImage && (
           <img
             src={story.coverImage}
             alt={story.title}
             style={{
-              width: "100%",
-              maxHeight: 560,
-              objectFit: "cover",
-              borderRadius: 16,
-              display: "block",
-              marginBottom: 35,
-            }}
+  width: "100%",
+  maxWidth: "100%",
+  maxHeight: 560,
+  objectFit: "cover",
+  borderRadius: "clamp(10px, 3vw, 16px)",
+  display: "block",
+  marginBottom: "clamp(24px, 6vw, 35px)",
+}}
           />
         )}
 
@@ -778,10 +791,11 @@ export default function StoryReaderPage() {
           <h1
             style={{
               fontSize:
-                "clamp(34px, 6vw, 56px)",
+                "clamp(30px, 6vw, 56px)",
               lineHeight: 1.1,
               margin: 0,
               fontWeight: 850,
+              overflowWrap: "break-word",
             }}
           >
             {story.title}
@@ -790,13 +804,14 @@ export default function StoryReaderPage() {
           {story.subtitle && (
             <p
               style={{
-                fontSize: 20,
+                fontSize: "clamp(16px, 3.5vw, 20px)",
                 lineHeight: 1.5,
                 opacity: 0.65,
                 fontStyle: "italic",
                 margin:
                   "14px auto 0",
                 maxWidth: 650,
+                overflowWrap: "break-word",
               }}
             >
               {story.subtitle}
@@ -817,11 +832,14 @@ export default function StoryReaderPage() {
 
         {/* STORY CONTENT */}
         <div
-          style={{
-            maxWidth: 780,
-            margin: "0 auto",
-          }}
-        >
+  style={{
+    width: "100%",
+    maxWidth: 780,
+    margin: "0 auto",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+  }}
+>
           {story.content?.content?.map(
             (node: any, index: number) =>
               renderNode(node, index)
@@ -893,6 +911,8 @@ export default function StoryReaderPage() {
               style={{
                 width: "100%",
                 minHeight: 100,
+                boxSizing: "border-box",
+maxWidth: "100%",
                 padding: 12,
                 borderRadius: 10,
                 border:
@@ -977,6 +997,8 @@ export default function StoryReaderPage() {
             style={{
               width: "100%",
               minHeight: 90,
+              boxSizing: "border-box",
+maxWidth: "100%",
               padding: 12,
               borderRadius: 10,
               border:
@@ -989,12 +1011,13 @@ export default function StoryReaderPage() {
           />
 
           <div
-            style={{
-              display: "flex",
-              gap: 8,
-              marginTop: 8,
-            }}
-          >
+  style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  }}
+>
             <button
               type="button"
               onClick={postComment}
@@ -1064,17 +1087,19 @@ export default function StoryReaderPage() {
                   >
                     <p
                       style={{
-                        margin: "0 0 6px",
-                      }}
+  margin: "0 0 6px",
+  overflowWrap: "anywhere",
+}}
                     >
                       <b>{c.user?.email}</b>
                     </p>
 
                     <p
                       style={{
-                        margin: 0,
-                        lineHeight: 1.6,
-                      }}
+  margin: 0,
+  lineHeight: 1.6,
+  overflowWrap: "anywhere",
+}}
                     >
                       {c.text}
                     </p>
@@ -1138,10 +1163,10 @@ export default function StoryReaderPage() {
                           >
                             <p
                               style={{
-                                fontSize: 13,
-                                margin:
-                                  "0 0 5px",
-                              }}
+  fontSize: 13,
+  margin: "0 0 5px",
+  overflowWrap: "anywhere",
+}}
                             >
                               <b>
                                 {r.user?.email}
@@ -1152,10 +1177,11 @@ export default function StoryReaderPage() {
 
                             <p
                               style={{
-                                fontSize: 14,
-                                margin: 0,
-                                lineHeight: 1.5,
-                              }}
+  fontSize: 14,
+  margin: 0,
+  lineHeight: 1.5,
+  overflowWrap: "anywhere",
+}}
                             >
                               {r.text}
                             </p>
