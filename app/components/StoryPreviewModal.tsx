@@ -93,7 +93,7 @@ export default function StoryPreviewModal({
   onClose,
   onBuy,
   onRead,
-  previewParagraphs = 7,
+  previewParagraphs = 14,
   previewImages = [],
 }: Props) {
   const [previewIndex, setPreviewIndex] = React.useState(0);
