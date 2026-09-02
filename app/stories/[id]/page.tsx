@@ -392,7 +392,7 @@ export default function StoryReaderPage() {
 
   async function refreshComments() {
     try {
-      const res = await fetch(`/api/comments/${storyId}`, {
+      const res = await fetch(`/api/stories/comments/${storyId}`, {
         credentials: "include",
         cache: "no-store",
       });
