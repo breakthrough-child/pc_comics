@@ -27,20 +27,41 @@ export async function GET(req: Request) {
       },
 
       select: {
-        id: true,
-        title: true,
-        subtitle: true,
-        description: true,
-        coverImage: true,
-        price: true,
-        content: true,
-        createdAt: true,
-        updatedAt: true,
-        isPublished: true,
-      },
+  id: true,
+  title: true,
+  subtitle: true,
+  description: true,
+  coverImage: true,
+  price: true,
+  content: true,
+  createdAt: true,
+  updatedAt: true,
+  isPublished: true,
+
+  purchases: userId
+    ? {
+        where: { userId },
+        select: { id: true },
+      }
+    : false,
+},
     });
 
-    return NextResponse.json(stories);
+    const formatted = stories.map((story: any) => ({
+  id: story.id,
+  title: story.title,
+  subtitle: story.subtitle,
+  description: story.description,
+  coverImage: story.coverImage,
+  price: story.price,
+  content: story.content,
+  isPublished: story.isPublished,
+  purchased: userId
+    ? story.purchases.length > 0
+    : false,
+}));
+
+return NextResponse.json(formatted);
   } catch (error) {
     console.error("Failed to fetch stories:", error);
 

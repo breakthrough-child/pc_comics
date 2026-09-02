@@ -25,10 +25,14 @@ export async function GET(
 
     // Admins can always load a story for editing.
     if (role === "ADMIN") {
-      return NextResponse.json({
-        story,
-      });
-    }
+  return NextResponse.json({
+    story: {
+      ...story,
+      content: story.content,
+      purchased: true,
+    },
+  });
+}
 
     // Unpublished stories are not available to regular users.
     if (!story.isPublished) {
