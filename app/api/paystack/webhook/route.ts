@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { creditCoinPurchase } from "@/lib/coins";
 
 export async function POST(req: Request) {
   try {
@@ -116,6 +117,30 @@ export async function POST(req: Request) {
     console.log("✅ PAYSTACK PAYMENT VERIFIED");
 
     /*
+     * COIN PURCHASE
+     *
+     * Coin checkout sends metadata.type === "coins". The callback usually
+     * credits the coins first; creditCoinPurchase ignores repeats.
+     */
+    if (verifiedTransaction.metadata?.type === "coins") {
+      const result = await creditCoinPurchase(verifiedTransaction);
+
+      if (!result.ok) {
+        console.error("❌ COIN WEBHOOK:", result.error);
+
+        return NextResponse.json(
+          { error: result.error },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        received: true,
+        coinsCredited: !result.alreadyCredited,
+      });
+    }
+
+    /*
      * STORY PAYMENT
      *
      * Story checkout sends:
@@ -127,6 +152,8 @@ export async function POST(req: Request) {
      * }
      *
      * Story purchases are stored separately from comic purchases.
+     * Whole-book checkout has been replaced by coins, but this branch
+     * stays so payments started before the switch are still honoured.
      */
     if (verifiedTransaction.metadata?.type === "story") {
       const userId = verifiedTransaction.metadata?.userId;

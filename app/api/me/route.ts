@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUserFromToken } from "@/lib/getUserFromToken";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
   const user = getUserFromToken(req);
@@ -8,5 +9,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json(user);
+  const wallet = await prisma.user
+    .findUnique({
+      where: { id: user.userId },
+      select: { coins: true },
+    })
+    .catch(() => null);
+
+  return NextResponse.json({ ...user, coins: wallet?.coins ?? 0 });
 }

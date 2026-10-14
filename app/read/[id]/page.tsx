@@ -1,28 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import CommentsSection from "../../components/CommentsSection";
 
 type ComicContent = {
+  title?: string;
   pages: string[];
 };
 
+type WidthMode = "fit" | "wide";
+
+const WIDTHS: Record<WidthMode, number> = { fit: 820, wide: 1200 };
+const PREFS_KEY = "comicReader:prefs";
+
+function positionKey(id: string) {
+  return `comicReader:${id}:page`;
+}
+
 export default function ReadComicPage() {
-  const { id } = useParams();
+  const { id } = useParams() as { id: string };
 
   const [content, setContent] = useState<ComicContent | null>(null);
-  const [preloadedPages, setPreloadedPages] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [page, setPage] = useState(0);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [comments, setComments] = useState<any[]>([]);
-  const [replyTo, setReplyTo] = useState<any | null>(null);
-  const [newComment, setNewComment] = useState("");
+  const [loaded, setLoaded] = useState<Set<number>>(new Set());
+  const [current, setCurrent] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [uiHidden, setUiHidden] = useState(false);
+  const [widthMode, setWidthMode] = useState<WidthMode>("fit");
+  const [gaps, setGaps] = useState(false);
+  const [resumePage, setResumePage] = useState<number | null>(null);
 
-  const isLastPage =
-  page === (content?.pages.length || 0) - 1;
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastScroll = useRef(0);
 
   useEffect(() => {
     async function fetchContent() {
@@ -39,8 +53,6 @@ export default function ReadComicPage() {
         }
 
         setContent(data);
-        setPage(0);
-        setPreloadedPages([]);
       } catch {
         setError("Failed to load comic");
       }
@@ -49,408 +61,368 @@ export default function ReadComicPage() {
     if (id) fetchContent();
   }, [id]);
 
-  
+  // Restore reader preferences and the last page read.
   useEffect(() => {
-    if (!content?.pages?.length) return;
+    try {
+      const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+      if (prefs.widthMode === "wide" || prefs.widthMode === "fit") setWidthMode(prefs.widthMode);
+      if (typeof prefs.gaps === "boolean") setGaps(prefs.gaps);
 
-    const PRELOAD_AHEAD = 6;
+      const saved = Number(localStorage.getItem(positionKey(id)));
+      if (saved > 1) setResumePage(saved);
+    } catch {}
+  }, [id]);
 
-    for (
-      let i = page + 1;
-      i <= Math.min(
-        page + PRELOAD_AHEAD,
-        content.pages.length - 1
-      );
-      i++
-    ) {
-      const img = new Image();
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ widthMode, gaps }));
+    } catch {}
+  }, [widthMode, gaps]);
 
-      img.src = content.pages[i];
+  useEffect(() => {
+    if (!content) return;
+    try {
+      localStorage.setItem(positionKey(id), String(current));
+    } catch {}
+  }, [current, content, id]);
 
-      img.onload = () => {
-        setPreloadedPages((prev) =>
-          prev.includes(content.pages[i])
-            ? prev
-            : [...prev, content.pages[i]]
-        );
-      };
+  // Track which page is in view.
+  useEffect(() => {
+    if (!content?.pages.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setCurrent(Number((entry.target as HTMLElement).dataset.index));
+          }
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px" }
+    );
+
+    pageRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [content]);
+
+  // Progress bar + hide the controls while scrolling down.
+  useEffect(() => {
+    function onScroll() {
+      const y = window.scrollY;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+
+      setProgress(max > 0 ? Math.min(100, (y / max) * 100) : 0);
+
+      if (Math.abs(y - lastScroll.current) > 8) {
+        setUiHidden(y > 140 && y > lastScroll.current);
+        lastScroll.current = y;
+      }
     }
-  }, [page, content]);
 
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-  useEffect(() => {
-  let interval: NodeJS.Timeout;
+  const scrollToPage = useCallback((index: number, smooth = true) => {
+    const el = pageRefs.current[index];
+    if (!el) return;
 
-  async function loadComments() {
-    const res = await fetch(`/api/comments/${id}`, {
-      cache: "no-store", // 🔥 prevent stale data
+    window.scrollTo({
+      top: el.getBoundingClientRect().top + window.scrollY - 8,
+      behavior: smooth ? "smooth" : "auto",
     });
+  }, []);
 
-    const data = await res.json();
+  // j / k or arrow keys jump between pages.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.target as HTMLElement).closest("input, textarea")) return;
+      if (!content) return;
 
-    setComments([]); // 🔥 force re-render
-    setTimeout(() => {
-      setComments(data);
-    }, 0);
+      if (e.key === "j" || e.key === "ArrowRight") {
+        scrollToPage(Math.min(current + 1, content.pages.length - 1));
+      } else if (e.key === "k" || e.key === "ArrowLeft") {
+        scrollToPage(Math.max(current - 1, 0));
+      }
+    }
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [content, current, scrollToPage]);
+
+  function markLoaded(index: number) {
+    setLoaded((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
   }
 
-  if (id) loadComments(); // initial load
-}, [id]);
-
-
-    async function refreshComments() {
-  const res = await fetch(`/api/comments/${id}`, {
-    cache: "no-store", // 🔥 FORCE fresh data
-  });
-
-  const data = await res.json();
-
-  // setComments([]);        // 🔥 force React reset
-  // setTimeout(() => {
-  //   setComments(data);    // 🔥 ensures re-render
-  // }, 0);
-
-  setComments(data);
-}
-
-
-    async function likeComment(commentId: string) {
-
-      setComments((prev) =>
-        prev.map((c) =>
-          c.id === commentId
-            ? {
-                ...c,
-                likes: c.likes?.length
-                  ? [] // toggle (simple version)
-                  : [{}],
-              }
-            : c
-        )
-      );
-      
-      await fetch("/api/comments/like", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ commentId }),
-      });
-
-      await refreshComments();
+  async function submitReview() {
+    if (rating < 1) {
+      alert("Please select a rating");
+      return;
     }
 
+    const res = await fetch("/api/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ comicId: id, rating, comment: reviewText }),
+    });
 
-          async function postComment() {
-        await fetch("/api/comments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            comicId: id,
-            text: newComment,
-            parentId: replyTo?.id || null,
-          }),
-        });
+    if (res.status === 401) {
+      window.location.assign("/login");
+      return;
+    }
 
-        setNewComment("");
-        setReplyTo(null);
-        await refreshComments();
-      }
+    if (res.ok) {
+      setSubmitted(true);
+    } else {
+      alert("Failed to submit review");
+    }
+  }
 
   if (error) {
     return (
-      <div style={{ padding: 20 }}>
-        <h2>🚫 Access Denied</h2>
-        <p>{error}</p>
+      <div className="comic-reader" style={{ display: "grid", placeItems: "center", padding: 20 }}>
+        <div style={{ textAlign: "center", maxWidth: 380 }}>
+          <div style={{ fontSize: 42 }}>🔒</div>
+          <h2 style={{ margin: "10px 0 6px" }}>This comic is locked</h2>
+          <p style={{ opacity: 0.65, margin: "0 0 18px" }}>
+            {error === "Unauthorized"
+              ? "Log in to read this comic."
+              : error === "Not purchased"
+              ? "Buy this comic to start reading."
+              : error}
+          </p>
+          <a className="pc-btn" href={error === "Unauthorized" ? "/login" : "/comics"}>
+            {error === "Unauthorized" ? "Log in" : "Back to comics"}
+          </a>
+        </div>
       </div>
     );
   }
 
-if (!content?.pages || content.pages.length === 0) {
-  return (
-    <div style={{ padding: 20 }}>
-      <h2>No pages found for this comic</h2>
-    </div>
-  );
-}
-
-return (
-  <div
-    style={{
-      minHeight: "100vh",
-      padding: "20px",
-      background: "transparent",
-      color: "var(--text)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 900,
-        background: "rgba(255,255,255,0.06)",
-        borderRadius: 16,
-        padding: 20,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: 22,
-          marginBottom: 16,
-          textAlign: "center",
-        }}
-      >
-        📖 Read Comic
-      </h1>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <img
-          src={content.pages[page]}
-          loading="eager"
-          decoding="async"
-          style={{
-            width: "100%",
-            maxHeight: "75vh",
-            objectFit: "contain",
-            borderRadius: 12,
-            boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-          }}
-        />
+  if (!content) {
+    return (
+      <div className="comic-reader" style={{ display: "grid", placeItems: "center" }}>
+        <p style={{ opacity: 0.6 }}>Opening comic...</p>
       </div>
+    );
+  }
 
-      {/* NAVIGATION */}
-      <div
-        style={{
-          marginTop: 20,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+  if (content.pages.length === 0) {
+    return (
+      <div className="comic-reader" style={{ display: "grid", placeItems: "center" }}>
+        <p>No pages found for this comic.</p>
+      </div>
+    );
+  }
+
+  const total = content.pages.length;
+  const atEnd = current >= total - 1;
+
+  return (
+    <div className="comic-reader">
+      <div className="comic-progress" style={{ width: `${progress}%` }} />
+
+      {/* TOP BAR */}
+      <header className={`comic-topbar ${uiHidden ? "is-hidden" : ""}`}>
+        <a className="reader-icon-btn" href="/comics" aria-label="Back to comics" style={{ background: "rgba(255,255,255,0.08)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </a>
+
+        <div className="reader-heading">
+          <small>Now reading</small>
+          <strong>{content.title || "Comic"}</strong>
+        </div>
+
+        <span className="comic-hud-count" style={{ opacity: 0.75 }}>
+          {current + 1} / {total}
+        </span>
+      </header>
+
+      {resumePage !== null && resumePage < total && (
         <button
-          onClick={() => setPage((p) => Math.max(p - 1, 0))}
-          disabled={page === 0}
+          type="button"
+          onClick={() => {
+            scrollToPage(resumePage, false);
+            setResumePage(null);
+          }}
+          className="pc-btn"
           style={{
-            padding: "8px 14px",
-            borderRadius: 10,
-            border: "none",
-            cursor: page === 0 ? "not-allowed" : "pointer",
-            background: page === 0 ? "#ccc" : "#ff4da6",
-            color: "#fff",
+            position: "fixed",
+            top: 70,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 65,
           }}
         >
-          ⬅ Prev
+          Resume from page {resumePage + 1}
+          <span
+            role="button"
+            aria-label="Dismiss"
+            onClick={(e) => {
+              e.stopPropagation();
+              setResumePage(null);
+            }}
+            style={{ marginLeft: 6, opacity: 0.8 }}
+          >
+            ✕
+          </span>
+        </button>
+      )}
+
+      {/* PAGES */}
+      <main
+        className={`comic-strip ${gaps ? "comic-gap" : ""}`}
+        style={{ maxWidth: WIDTHS[widthMode] }}
+        onClick={() => setUiHidden((hidden) => !hidden)}
+      >
+        {content.pages.map((src, index) => (
+          <div
+            key={src + index}
+            ref={(el) => {
+              pageRefs.current[index] = el;
+            }}
+            data-index={index}
+            className={`comic-page ${loaded.has(index) ? "is-loaded" : ""}`}
+          >
+            {!loaded.has(index) && (
+              <div className="comic-page-skeleton">Page {index + 1}</div>
+            )}
+
+            <img
+              src={src}
+              alt={`Page ${index + 1}`}
+              loading={index < 3 ? "eager" : "lazy"}
+              decoding="async"
+              draggable={false}
+              ref={(img) => {
+                // Cached images can finish before onLoad is attached.
+                if (img?.complete && img.naturalWidth > 0) markLoaded(index);
+              }}
+              onLoad={() => markLoaded(index)}
+              onError={() => markLoaded(index)}
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          </div>
+        ))}
+      </main>
+
+      {/* THE END */}
+      <section className="comic-end">
+        <div style={{ textAlign: "center", margin: "10px 0 34px" }}>
+          <div style={{ letterSpacing: "0.4em", fontSize: 12, fontWeight: 800, color: "#ff85c1" }}>
+            THE END
+          </div>
+          <h2 style={{ fontSize: "clamp(24px, 6vw, 34px)", margin: "8px 0 0" }}>
+            {content.title || "Thanks for reading"}
+          </h2>
+        </div>
+
+        <div className="comic-panel" style={{ textAlign: "center" }}>
+          {submitted ? (
+            <p style={{ margin: 0 }}>Thanks for rating this comic!</p>
+          ) : (
+            <>
+              <h3 style={{ margin: "0 0 6px" }}>Rate this comic</h3>
+              <div style={{ marginBottom: 10 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-label={`${n} stars`}
+                    onClick={() => setRating(n)}
+                    style={{
+                      fontSize: 30,
+                      margin: 2,
+                      cursor: "pointer",
+                      background: "none",
+                      border: "none",
+                      color: n <= rating ? "#f5a623" : "rgba(255,255,255,0.25)",
+                    }}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <textarea
+                placeholder="What did you think? (optional)"
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+              />
+              <button type="button" className="pc-btn" onClick={submitReview} style={{ marginTop: 10 }}>
+                Submit review
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="comic-panel">
+          <CommentsSection
+            listUrl={`/api/comments/${id}`}
+            postUrl="/api/comments"
+            postBody={{ comicId: id }}
+            tone="dark"
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          <button type="button" className="pc-btn pc-btn-ghost" style={{ color: "#fff" }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+            ↑ Back to top
+          </button>
+          <a className="pc-btn" href="/comics">
+            More comics
+          </a>
+        </div>
+      </section>
+
+      {/* FLOATING CONTROLS */}
+      <div className={`comic-hud ${uiHidden ? "is-hidden" : ""}`}>
+        <button
+          type="button"
+          aria-label="Previous page"
+          onClick={() => scrollToPage(Math.max(current - 1, 0))}
+          disabled={current === 0}
+        >
+          ↑
         </button>
 
-        <span style={{ fontSize: 14, opacity: 0.8 }}>
-          Page {page + 1} / {content.pages.length}
+        <span className="comic-hud-count">
+          {current + 1} / {total}
         </span>
 
         <button
-          onClick={() =>
-            setPage((p) => Math.min(p + 1, content.pages.length - 1))
-          }
-          disabled={page === content.pages.length - 1}
-          style={{
-            padding: "8px 14px",
-            borderRadius: 10,
-            border: "none",
-            cursor:
-              page === content.pages.length - 1 ? "not-allowed" : "pointer",
-            background:
-              page === content.pages.length - 1 ? "#ccc" : "#ff4da6",
-            color: "#fff",
-          }}
+          type="button"
+          aria-label="Next page"
+          onClick={() => scrollToPage(Math.min(current + 1, total - 1))}
+          disabled={atEnd}
         >
-          Next ➡
-        </button>
-      </div>
-
-
-      {isLastPage && !submitted && (
-  <div style={{ marginTop: 25, textAlign: "center" }}>
-    <h3>⭐ Rate this comic</h3>
-
-    <div style={{ marginBottom: 10 }}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          onClick={() => setRating(n)}
-          style={{
-            fontSize: 22,
-            margin: 4,
-            cursor: "pointer",
-            background: "none",
-            border: "none",
-          }}
-        >
-          {n <= rating ? "⭐" : "☆"}
-        </button>
-      ))}
-    </div>
-
-    <textarea
-      placeholder="Leave a comment..."
-      value={comment}
-      onChange={(e) => setComment(e.target.value)}
-      style={{
-        width: "100%",
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 10,
-      }}
-    />
-
-    <button
-      onClick={async () => {
-        const res = await fetch("/api/review", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            comicId: id,
-            rating,
-            comment,
-          }),
-        });
-
-        if (res.ok) {
-          setSubmitted(true);
-        } else {
-          alert("Failed to submit review");
-        }
-      }}
-      style={{
-        padding: "10px 16px",
-        borderRadius: 8,
-        background: "#ff4da6",
-        color: "#fff",
-        border: "none",
-        cursor: "pointer",
-      }}
-    >
-      Submit Review
-    </button>
-  </div>
-)}
-
-<div style={{ marginTop: 40, width: "100%" }}>
-  <h3>💬 Comments</h3>
-</div>
-
-
-<div style={{ marginTop: 10 }}>
-  {replyTo && (
-    <p style={{ fontSize: 13, opacity: 0.7 }}>
-      Replying to <b>{replyTo.user?.email}</b>
-    </p>
-  )}
-
-  <textarea
-    value={newComment}
-    onChange={(e) => setNewComment(e.target.value)}
-    placeholder="Write a comment..."
-    style={{
-      width: "100%",
-      padding: 10,
-      borderRadius: 8,
-      marginTop: 5,
-    }}
-  />
-
-  <button
-    onClick={postComment}
-    style={{
-      marginTop: 8,
-      padding: "8px 14px",
-      background: "#ff4da6",
-      color: "#fff",
-      border: "none",
-      borderRadius: 8,
-      cursor: "pointer",
-    }}
-  >
-    Post
-  </button>
-</div>
-
-
-
-<div style={{ marginTop: 20 }}>
-  {comments
-  .filter((c) => !c.parentId) // 🔥 ONLY ROOT COMMENTS
-  .map((c) => (
-    <div
-      key={c.id}
-      style={{
-        padding: 12,
-        marginBottom: 10,
-        borderRadius: 10,
-        background: "rgba(255,255,255,0.05)",
-      }}
-    >
-      <p style={{ marginBottom: 5 }}>
-        <b>{c.user?.email}</b>
-      </p>
-
-      <p>{c.text}</p>
-
-      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-        <button
-          onClick={() => setReplyTo(c)}
-          style={{ fontSize: 12 }}
-        >
-          Reply
+          ↓
         </button>
 
         <button
-          onClick={() => likeComment(c.id)}
-          style={{ fontSize: 12 }}
+          type="button"
+          className={`hide-sm ${widthMode === "wide" ? "is-active" : ""}`}
+          onClick={() => setWidthMode((m) => (m === "fit" ? "wide" : "fit"))}
         >
-          ❤️ {c.likes?.length || 0}
+          {widthMode === "wide" ? "Wide" : "Fit"}
+        </button>
+
+        <button
+          type="button"
+          className={gaps ? "is-active" : ""}
+          onClick={() => setGaps((g) => !g)}
+          title="Space between pages"
+        >
+          {gaps ? "Gaps" : "Seamless"}
         </button>
       </div>
-
-      {/* REPLIES */}
-      <div style={{ marginLeft: 20, marginTop: 10 }}>
-        {comments
-          .filter((r) => r.parentId === c.id)
-          .map((r) => (
-            <div key={r.id} style={{ marginTop: 8 }}>
-              <p style={{ fontSize: 13 }}>
-                <b>{r.user?.email}</b> → replying to {c.user?.email}
-              </p>
-
-              <p style={{ fontSize: 13 }}>{r.text}</p>
-
-              <button
-                onClick={() => likeComment(r.id)}
-                style={{ fontSize: 12 }}
-              >
-                ❤️ {r.likes?.length || 0}
-              </button>
-            </div>
-          ))}
-      </div>
     </div>
-  ))}
-</div>
-
-
-    </div>
-  </div>
-);
+  );
 }

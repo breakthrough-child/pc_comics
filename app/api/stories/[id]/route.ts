@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromToken } from "@/lib/getUserFromToken";
+import { canReadChapter, getReaderAccess } from "@/lib/chapters";
 
 export async function GET(
   req: Request,
@@ -8,58 +9,63 @@ export async function GET(
 ) {
   const user = getUserFromToken(req);
   const userId = user?.userId || null;
-  const role = user?.role;
+  const isAdmin = user?.role === "ADMIN";
   const { id } = await params;
 
   try {
     const story = await prisma.story.findUnique({
       where: { id },
+      select: {
+        id: true,
+        title: true,
+        subtitle: true,
+        description: true,
+        coverImage: true,
+        isPublished: true,
+        createdAt: true,
+        updatedAt: true,
+        chapters: {
+          where: isAdmin ? {} : { isPublished: true },
+          orderBy: { number: "asc" },
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            isFree: true,
+            price: true,
+            isPublished: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
-    if (!story) {
+    // Unpublished stories are only visible to admins.
+    if (!story || (!story.isPublished && !isAdmin)) {
       return NextResponse.json(
         { error: "Story not found" },
         { status: 404 }
       );
     }
 
-    // Admins can always load a story for editing.
-    if (role === "ADMIN") {
-  return NextResponse.json({
-    story: {
-      ...story,
-      content: story.content,
-      purchased: true,
-    },
-  });
-}
+    const access = await getReaderAccess(id, userId);
 
-    // Unpublished stories are not available to regular users.
-    if (!story.isPublished) {
-      return NextResponse.json(
-        { error: "Story not found" },
-        { status: 404 }
-      );
-    }
-
-    // Published stories can be viewed by users who purchased them.
-    const purchased = userId
-      ? await prisma.storyPurchase.findUnique({
-          where: {
-            userId_storyId: {
-              userId,
-              storyId: id,
-            },
-          },
-        })
-      : null;
+    const chapters = story.chapters.map((chapter) => ({
+      ...chapter,
+      isFree: chapter.isFree || chapter.price <= 0,
+      unlocked:
+        access.ownsStory || access.unlockedIds.has(chapter.id),
+      canRead: canReadChapter(chapter, access, isAdmin),
+    }));
 
     return NextResponse.json({
       story: {
         ...story,
-        content: purchased ? story.content : null,
-        purchased: Boolean(purchased),
+        chapters,
+        ownsStory: access.ownsStory,
       },
+      coins: access.coins,
+      isLoggedIn: Boolean(userId),
     });
   } catch (error) {
     console.error("Failed to fetch story:", error);
@@ -93,8 +99,6 @@ export async function PATCH(
       subtitle,
       description,
       coverImage,
-      price,
-      content,
       isPublished,
       sendNewsletter,
     } = await req.json();
@@ -117,8 +121,6 @@ export async function PATCH(
         ...(subtitle !== undefined ? { subtitle } : {}),
         ...(description !== undefined ? { description } : {}),
         ...(coverImage !== undefined ? { coverImage } : {}),
-        ...(price !== undefined ? { price: Number(price) } : {}),
-        ...(content !== undefined ? { content } : {}),
         ...(typeof isPublished === "boolean"
           ? { isPublished }
           : {}),
@@ -196,9 +198,21 @@ export async function DELETE(
       );
     }
 
-    await prisma.story.delete({
-      where: { id },
-    });
+    // Remove everything attached to the story. Chapters and their
+    // unlocks are removed by the database cascade.
+    await prisma.$transaction([
+      prisma.like.deleteMany({
+        where: { comment: { storyId: id } },
+      }),
+      prisma.comment.updateMany({
+        where: { storyId: id },
+        data: { parentId: null },
+      }),
+      prisma.comment.deleteMany({ where: { storyId: id } }),
+      prisma.review.deleteMany({ where: { storyId: id } }),
+      prisma.storyPurchase.deleteMany({ where: { storyId: id } }),
+      prisma.story.delete({ where: { id } }),
+    ]);
 
     return NextResponse.json({
       message: "Story deleted",

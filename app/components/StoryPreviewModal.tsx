@@ -1,13 +1,7 @@
 "use client";
 
 import React from "react";
-
-type StoryNode = {
-  type?: string;
-  attrs?: Record<string, any>;
-  content?: StoryNode[];
-  text?: string;
-};
+import StoryContent from "./StoryContent";
 
 type Story = {
   id: string;
@@ -15,94 +9,30 @@ type Story = {
   subtitle?: string | null;
   description?: string | null;
   coverImage?: string | null;
-  price: number;
-  content?: {
-    type?: string;
-    content?: StoryNode[];
-  } | null;
-  purchased?: boolean;
+  chapterCount?: number;
+  freeChapterCount?: number;
+  avgRating?: number | null;
+  previewContent?: any;
 };
 
 type Props = {
   story: Story | null;
   open: boolean;
   onClose: () => void;
-  onBuy: () => void;
   onRead: () => void;
-
-  /**
-   * Number of text blocks to show in the preview.
-   * Example:
-   * previewParagraphs={3}
-   */
-  previewParagraphs?: number;
-
-  /**
-   * Image URLs that the admin has selected for the preview.
-   * Only these images are displayed.
-   */
-  previewImages?: string[];
 };
-
-function extractText(node: StoryNode): string {
-  if (node.text) {
-    return node.text;
-  }
-
-  if (!node.content?.length) {
-    return "";
-  }
-
-  return node.content.map(extractText).join("");
-}
-
-function getPreviewParagraphs(
-  content: Story["content"],
-  limit: number
-): string[] {
-  if (!content?.content) {
-    return [];
-  }
-
-  const paragraphs: string[] = [];
-
-  for (const node of content.content) {
-    if (
-      node.type === "paragraph" ||
-      node.type === "heading" ||
-      node.type === "blockquote"
-    ) {
-      const text = extractText(node).trim();
-
-      if (text) {
-        paragraphs.push(text);
-      }
-    }
-
-    if (paragraphs.length >= limit) {
-      break;
-    }
-  }
-
-  return paragraphs;
-}
 
 export default function StoryPreviewModal({
   story,
   open,
   onClose,
-  onBuy,
   onRead,
-  previewParagraphs = 14,
-  previewImages = [],
 }: Props) {
-  const [previewIndex, setPreviewIndex] = React.useState(0);
   const [showShareMenu, setShowShareMenu] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) {
-      setPreviewIndex(0);
       setShowShareMenu(false);
       setShowToast(false);
     }
@@ -110,10 +40,7 @@ export default function StoryPreviewModal({
 
   React.useEffect(() => {
     if (showToast) {
-      const timer = setTimeout(() => {
-        setShowToast(false);
-      }, 2000);
-
+      const timer = setTimeout(() => setShowToast(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [showToast]);
@@ -122,12 +49,28 @@ export default function StoryPreviewModal({
     return null;
   }
 
-  const paragraphs = getPreviewParagraphs(
-    story.content,
-    previewParagraphs
-  );
+  const hasPreview = Boolean(story.previewContent?.content?.length);
 
-  const images = previewImages.filter(Boolean);
+  async function share() {
+    if (!story) return;
+
+    const shareUrl = `${window.location.origin}/stories?preview=${story.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: story.title,
+          text: `Check out "${story.title}"`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setShowShareMenu(true);
+      }
+    } catch (error) {
+      console.error("Share failed:", error);
+    }
+  }
 
   return (
     <div
@@ -140,409 +83,169 @@ export default function StoryPreviewModal({
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999,
-        padding: 16,
+        padding: 12,
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: 900,
-          maxHeight: "90vh",
-          overflowY: "auto",
-          borderRadius: 16,
-          background: "var(--card-bg)",
+          maxWidth: 760,
+          maxHeight: "92vh",
+          borderRadius: 20,
+          background: "var(--surface-strong)",
           color: "var(--text)",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+          overflow: "hidden",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
         }}
       >
-        {/* COVER IMAGE */}
-
-        {story.coverImage && (
+        <div style={{ overflowY: "auto", flex: 1 }}>
+          {/* HEADER */}
           <div
             style={{
-              width: "100%",
-              maxHeight: 420,
-              overflow: "hidden",
-              background: "rgba(0,0,0,0.2)",
-            }}
-          >
-            <img
-              src={story.coverImage}
-              alt={story.title}
-              style={{
-                width: "100%",
-                maxHeight: 420,
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          </div>
-        )}
-
-        {/* HEADER */}
-
-        <div style={{ padding: 18 }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 24,
-              fontWeight: 800,
-            }}
-          >
-            {story.title}
-          </h2>
-
-          {story.subtitle && (
-            <p
-              style={{
-                margin: "7px 0 0",
-                fontSize: 15,
-                opacity: 0.7,
-                fontStyle: "italic",
-              }}
-            >
-              {story.subtitle}
-            </p>
-          )}
-
-          <p
-            style={{
-              margin: "10px 0 0",
-              fontSize: 13,
-              opacity: 0.75,
-            }}
-          >
-            ₦{story.price}
-          </p>
-        </div>
-
-        {/* DESCRIPTION */}
-
-        {story.description && (
-          <div
-            style={{
-              padding: "0 18px 18px",
-            }}
-          >
-            <h4
-              style={{
-                margin: "0 0 8px",
-                fontSize: 14,
-              }}
-            >
-              About this story
-            </h4>
-
-            <p
-              style={{
-                margin: 0,
-                opacity: 0.85,
-                fontSize: 14,
-                lineHeight: 1.7,
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {story.description}
-            </p>
-          </div>
-        )}
-
-        {/* STORY TEXT PREVIEW */}
-
-        {paragraphs.length > 0 && (
-          <div
-            style={{
-              padding: "0 18px 20px",
-            }}
-          >
-            <h4
-              style={{
-                margin: "0 0 10px",
-                fontSize: 14,
-              }}
-            >
-              Story Preview
-            </h4>
-
-            <div
-              style={{
-                padding: 16,
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.05)",
-                border:
-                  "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {paragraphs.map((paragraph, index) => (
-                <p
-                  key={index}
-                  style={{
-                    margin:
-                      index === paragraphs.length - 1
-                        ? 0
-                        : "0 0 14px",
-                    fontSize: 15,
-                    lineHeight: 1.8,
-                    opacity: 0.9,
-                  }}
-                >
-                  {paragraph}
-                </p>
-              ))}
-
-              <p
-                style={{
-                  margin: "16px 0 0",
-                  fontSize: 12,
-                  opacity: 0.5,
-                  fontStyle: "italic",
-                }}
-              >
-                Continue reading to discover the rest of the
-                story...
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* PREVIEW IMAGES */}
-
-        {images.length > 0 && (
-          <div
-            style={{
-              padding: "0 18px 20px",
               display: "flex",
-              flexDirection: "column",
-              gap: 10,
+              gap: 16,
+              padding: 18,
+              alignItems: "flex-start",
             }}
           >
-            <h4
-              style={{
-                margin: 0,
-                fontSize: 14,
-              }}
-            >
-              Story Preview
-            </h4>
-
-            {/* IMAGE */}
-
-            <div
-              style={{
-                width: "100%",
-                maxHeight: 500,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                borderRadius: 12,
-                overflow: "hidden",
-                background: "rgba(0,0,0,0.2)",
-              }}
-            >
+            {story.coverImage && (
               <img
-                src={images[previewIndex]}
-                alt={`Story preview ${previewIndex + 1}`}
+                src={story.coverImage}
+                alt={story.title}
                 style={{
-                  width: "100%",
-                  maxHeight: 500,
-                  objectFit: "contain",
-                  display: "block",
+                  width: "clamp(88px, 24vw, 140px)",
+                  aspectRatio: "2 / 3",
+                  objectFit: "cover",
+                  borderRadius: 12,
+                  flexShrink: 0,
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
                 }}
               />
-            </div>
+            )}
 
-            {/* CONTROLS */}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(20px, 5vw, 26px)",
+                  fontWeight: 800,
+                  lineHeight: 1.2,
+                }}
+              >
+                {story.title}
+              </h2>
 
-            {images.length > 1 && (
+              {story.subtitle && (
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: 14,
+                    opacity: 0.7,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {story.subtitle}
+                </p>
+              )}
+
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 12,
+                  gap: 6,
+                  flexWrap: "wrap",
+                  marginTop: 10,
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPreviewIndex((current) =>
-                      Math.max(current - 1, 0)
-                    )
-                  }
-                  disabled={previewIndex === 0}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: 8,
-                    border: "none",
-                    background:
-                      previewIndex === 0
-                        ? "rgba(100,100,100,0.2)"
-                        : "rgba(255,77,166,0.6)",
-                    color: "#fff",
-                    cursor:
-                      previewIndex === 0
-                        ? "not-allowed"
-                        : "pointer",
-                  }}
-                >
-                  ◀
-                </button>
-
-                <span
-                  style={{
-                    fontSize: 12,
-                    opacity: 0.8,
-                  }}
-                >
-                  {previewIndex + 1} / {images.length}
+                <span className="pc-chip pc-chip-muted">
+                  {story.chapterCount || 0} chapters
                 </span>
+                {story.freeChapterCount ? (
+                  <span className="pc-chip pc-chip-free">
+                    {story.freeChapterCount} free
+                  </span>
+                ) : null}
+                {story.avgRating ? (
+                  <span className="pc-chip pc-chip-paid">
+                    ★ {story.avgRating.toFixed(1)}
+                  </span>
+                ) : null}
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPreviewIndex((current) =>
-                      Math.min(
-                        current + 1,
-                        images.length - 1
-                      )
-                    )
-                  }
-                  disabled={
-                    previewIndex === images.length - 1
-                  }
+              {story.description && (
+                <p
                   style={{
-                    padding: "6px 10px",
-                    borderRadius: 8,
-                    border: "none",
-                    background:
-                      previewIndex === images.length - 1
-                        ? "rgba(100,100,100,0.2)"
-                        : "rgba(255,77,166,0.6)",
-                    color: "#fff",
-                    cursor:
-                      previewIndex === images.length - 1
-                        ? "not-allowed"
-                        : "pointer",
+                    margin: "12px 0 0",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    opacity: 0.85,
+                    whiteSpace: "pre-wrap",
                   }}
                 >
-                  ▶
-                </button>
-              </div>
-            )}
+                  {story.description}
+                </p>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* FIRST CHAPTER PREVIEW */}
+          {hasPreview && (
+            <div style={{ padding: "0 18px 18px" }}>
+              <div
+                style={{
+                  position: "relative",
+                  maxHeight: 340,
+                  overflow: "hidden",
+                  padding: "18px 18px 0",
+                  borderRadius: 14,
+                  background: "var(--reader-paper)",
+                }}
+              >
+                <div className="reader-chapter-label" style={{ textAlign: "left", marginBottom: 10 }}>
+                  Chapter 1 preview
+                </div>
+                <StoryContent
+                  content={story.previewContent}
+                  style={{ fontSize: 16 }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 120,
+                    background:
+                      "linear-gradient(transparent, var(--reader-paper))",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ACTIONS */}
-
         <div
           style={{
             display: "flex",
-            gap: 10,
-            padding: 18,
+            gap: 8,
+            padding: 14,
             justifyContent: "flex-end",
             flexWrap: "wrap",
-            borderTop:
-              "1px solid rgba(255,255,255,0.08)",
+            borderTop: "1px solid rgba(128,128,128,0.15)",
           }}
         >
-          {/* SHARE */}
-
-          <button
-            type="button"
-            onClick={async () => {
-              const shareUrl = `${window.location.origin}/stories?preview=${story.id}`;
-
-              const shareText = `🔥 Check out "${story.title}" on our platform!\n\nRead the story here:\n${shareUrl}`;
-
-              try {
-                if (navigator.share) {
-                  await navigator.share({
-                    title: story.title,
-                    text: shareText,
-                    url: shareUrl,
-                  });
-                } else {
-                  await navigator.clipboard.writeText(
-                    shareUrl
-                  );
-
-                  setShowShareMenu(true);
-                }
-              } catch (error) {
-                console.error("Share failed:", error);
-              }
-            }}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: "none",
-              background:
-                "linear-gradient(90deg, #00c6ff, #0072ff)",
-              color: "#fff",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
+          <button type="button" className="pc-btn pc-btn-ghost" onClick={share}>
             Share
           </button>
-
-          {/* CLOSE */}
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: "none",
-              background: "rgba(100,100,100,0.3)",
-              color: "var(--text)",
-              cursor: "pointer",
-            }}
-          >
+          <button type="button" className="pc-btn pc-btn-ghost" onClick={onClose}>
             Close
           </button>
-
-          {/* BUY / READ */}
-
-          {story.purchased ? (
-            <button
-              type="button"
-              onClick={onRead}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                background:
-                  "linear-gradient(90deg, #ff4da6, #ff85c1)",
-                color: "#fff",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Read
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onBuy}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                background:
-                  "linear-gradient(90deg, #ff4da6, #ff85c1)",
-                color: "#fff",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Buy
-            </button>
-          )}
+          <button type="button" className="pc-btn" onClick={onRead} style={{ flex: "1 1 160px", maxWidth: 260 }}>
+            Start reading
+          </button>
         </div>
       </div>
 

@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import StoryEditor from "../../components/StoryEditor";
+import { CoinIcon } from "../../components/StoryContent";
 
-type StoryContent = {
-  type: string;
-  content?: any[];
-  attrs?: Record<string, any>;
+type ChapterRow = {
+  id: string;
+  number: number;
+  title: string;
+  isFree: boolean;
+  price: number;
+  isPublished: boolean;
 };
 
 type Story = {
@@ -16,9 +19,8 @@ type Story = {
   subtitle?: string | null;
   description?: string | null;
   coverImage?: string | null;
-  price: number;
-  content: StoryContent;
   isPublished: boolean;
+  chapters: ChapterRow[];
 };
 
 export default function EditStoryPage() {
@@ -30,19 +32,12 @@ export default function EditStoryPage() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
   const [coverImage, setCoverImage] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [sendNewsletter, setSendNewsletter] = useState(false);
 
-  const [content, setContent] = useState<StoryContent>({
-    type: "doc",
-    content: [
-      {
-        type: "paragraph",
-      },
-    ],
-  });
+  const [chapters, setChapters] = useState<ChapterRow[]>([]);
+  const [busyChapterId, setBusyChapterId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,22 +76,8 @@ export default function EditStoryPage() {
         setTitle(story.title || "");
         setSubtitle(story.subtitle || "");
         setDescription(story.description || "");
-        setPrice(
-          story.price !== undefined && story.price !== null
-            ? String(story.price)
-            : ""
-        );
         setCoverImage(story.coverImage || "");
-        setContent(
-          story.content || {
-            type: "doc",
-            content: [
-              {
-                type: "paragraph",
-              },
-            ],
-          }
-        );
+        setChapters(story.chapters || []);
         setIsPublished(Boolean(story.isPublished));
       } catch (error) {
         console.error("LOAD STORY ERROR:", error);
@@ -149,19 +130,8 @@ export default function EditStoryPage() {
       return;
     }
 
-    if (!content || content.type !== "doc") {
-      alert("Add some story content");
-      return;
-    }
-
-    const numericPrice = Number(price);
-
-    if (
-      price.trim() === "" ||
-      Number.isNaN(numericPrice) ||
-      numericPrice < 0
-    ) {
-      alert("Enter a valid price");
+    if (publish && chapters.length === 0) {
+      alert("Add at least one chapter before publishing");
       return;
     }
 
@@ -181,8 +151,6 @@ export default function EditStoryPage() {
           subtitle: subtitle.trim() || null,
           description: description.trim(),
           coverImage: uploadedCoverUrl,
-          price: numericPrice,
-          content,
           isPublished: publish,
           sendNewsletter,
         }),
@@ -216,6 +184,46 @@ export default function EditStoryPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function reloadChapters() {
+    const res = await fetch(`/api/stories/${storyId}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setChapters(data.story?.chapters || []);
+    }
+  }
+
+  async function updateChapter(
+    chapterId: string,
+    body: Record<string, any>
+  ) {
+    setBusyChapterId(chapterId);
+
+    try {
+      const res = await fetch(`/api/chapters/${chapterId}`, {
+        method: body.delete ? "DELETE" : "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: body.delete ? undefined : JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to update chapter");
+        return;
+      }
+
+      await reloadChapters();
+    } finally {
+      setBusyChapterId(null);
     }
   }
 
@@ -303,7 +311,7 @@ export default function EditStoryPage() {
     <div
       style={{
         minHeight: "100vh",
-        padding: "24px",
+        padding: "48px clamp(10px, 3vw, 24px) 40px",
         background: "transparent",
         color: "var(--text)",
         fontFamily: "system-ui, sans-serif",
@@ -317,7 +325,7 @@ export default function EditStoryPage() {
           background: "rgba(255,255,255,0.06)",
           backdropFilter: "blur(12px)",
           borderRadius: 16,
-          padding: 24,
+          padding: "clamp(14px, 4vw, 24px)",
           boxShadow:
             "0 10px 30px rgba(255,77,166,0.15)",
           boxSizing: "border-box",
@@ -342,7 +350,7 @@ export default function EditStoryPage() {
                 marginBottom: 6,
               }}
             >
-              Edit Story
+              Manage Book
             </h1>
 
             <p
@@ -352,8 +360,7 @@ export default function EditStoryPage() {
                 fontSize: 14,
               }}
             >
-              Continue writing, update the story, save the
-              draft, or publish it.
+              Edit the book details and manage its chapters.
             </p>
           </div>
 
@@ -431,19 +438,6 @@ export default function EditStoryPage() {
             />
           </div>
 
-          {/* PRICE */}
-          <div>
-            <label style={labelStyle}>Price</label>
-
-            <input
-              placeholder="Price in ₦"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              inputMode="decimal"
-              style={inputStyle}
-            />
-          </div>
-
           {/* COVER IMAGE URL */}
           <div>
             <label style={labelStyle}>
@@ -518,16 +512,147 @@ export default function EditStoryPage() {
             </div>
           )}
 
-          {/* STORY EDITOR */}
+          {/* CHAPTERS */}
           <div style={{ marginTop: 8 }}>
-            <label style={labelStyle}>
-              Story Content
-            </label>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                marginBottom: 10,
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontSize: 20 }}>Chapters</h2>
+                <p style={{ margin: "4px 0 0", fontSize: 13, opacity: 0.65 }}>
+                  Choose which chapters are free and how many coins each
+                  paid chapter costs.
+                </p>
+              </div>
 
-            <StoryEditor
-              content={content}
-              onChange={setContent}
-            />
+              <button
+                type="button"
+                className="pc-btn"
+                onClick={() =>
+                  router.push(`/upload-story/${storyId}/chapters/new`)
+                }
+              >
+                + Add chapter
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {chapters.length === 0 && (
+                <p style={{ opacity: 0.6 }}>No chapters yet.</p>
+              )}
+
+              {chapters.map((chapter, index) => (
+                <div
+                  key={chapter.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    border: "1px solid var(--surface-border)",
+                    background: "rgba(128,128,128,0.05)",
+                    flexWrap: "wrap",
+                    opacity: busyChapterId === chapter.id ? 0.5 : 1,
+                  }}
+                >
+                  <span className="chapter-num">{chapter.number}</span>
+
+                  <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {chapter.title}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                      {chapter.isFree ? (
+                        <span className="pc-chip pc-chip-free">Free</span>
+                      ) : (
+                        <span className="pc-chip pc-chip-paid">
+                          <CoinIcon size={12} /> {chapter.price} coins
+                        </span>
+                      )}
+                      {!chapter.isPublished && (
+                        <span className="pc-chip pc-chip-muted">Hidden</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="reader-icon-btn"
+                      aria-label="Move up"
+                      disabled={index === 0 || busyChapterId !== null}
+                      onClick={() => updateChapter(chapter.id, { move: "up" })}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="reader-icon-btn"
+                      aria-label="Move down"
+                      disabled={index === chapters.length - 1 || busyChapterId !== null}
+                      onClick={() => updateChapter(chapter.id, { move: "down" })}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="reader-icon-btn"
+                      onClick={() =>
+                        updateChapter(chapter.id, {
+                          isPublished: !chapter.isPublished,
+                        })
+                      }
+                    >
+                      {chapter.isPublished ? "Hide" : "Show"}
+                    </button>
+                    <button
+                      type="button"
+                      className="reader-icon-btn"
+                      style={{ background: "rgba(255,77,166,0.15)", color: "var(--primary)" }}
+                      onClick={() =>
+                        router.push(
+                          `/upload-story/${storyId}/chapters/${chapter.id}`
+                        )
+                      }
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="reader-icon-btn"
+                      style={{ color: "#ff5a5a" }}
+                      aria-label="Delete chapter"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Delete "${chapter.title}"? Readers who unlocked it will lose access.`
+                          )
+                        ) {
+                          updateChapter(chapter.id, { delete: true });
+                        }
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* NEWSLETTER */}
@@ -607,7 +732,7 @@ export default function EditStoryPage() {
             >
               {saving
                 ? "Publishing..."
-                : "Publish Story"}
+                : "Publish Book"}
             </button>
 
             {/* DELETE */}
@@ -629,7 +754,7 @@ export default function EditStoryPage() {
                 color: "#ff7777",
               }}
             >
-              Delete Story
+              Delete Book
             </button>
           </div>
         </div>

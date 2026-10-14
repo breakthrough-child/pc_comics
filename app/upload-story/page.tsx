@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import StoryEditor from "../components/StoryEditor";
+import ChapterSettings, {
+  ChapterSettingsValue,
+  validateChapterSettings,
+} from "../components/ChapterSettings";
 
 type StoryContent = {
   type: string;
@@ -16,7 +20,12 @@ export default function UploadStoryPage() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
+  const [chapterSettings, setChapterSettings] =
+    useState<ChapterSettingsValue>({
+      title: "Chapter 1",
+      isFree: true,
+      price: "",
+    });
   const [coverImage, setCoverImage] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
@@ -96,10 +105,10 @@ export default function UploadStoryPage() {
       return;
     }
 
-    const numericPrice = Number(price);
+    const settingsError = validateChapterSettings(chapterSettings);
 
-    if (price.trim() === "" || Number.isNaN(numericPrice) || numericPrice < 0) {
-      alert("Enter a valid price");
+    if (settingsError) {
+      alert(settingsError);
       return;
     }
 
@@ -119,9 +128,15 @@ export default function UploadStoryPage() {
           subtitle: subtitle.trim() || null,
           description: description.trim(),
           coverImage: uploadedCoverUrl,
-          price: numericPrice,
-          content,
           isPublished,
+          chapter: {
+            title: chapterSettings.title.trim() || "Chapter 1",
+            content,
+            isFree: chapterSettings.isFree,
+            price: chapterSettings.isFree
+              ? 0
+              : Number(chapterSettings.price),
+          },
         }),
       });
 
@@ -141,23 +156,8 @@ export default function UploadStoryPage() {
             : "Story saved as draft")
       );
 
-      if (isPublished) {
-        setTitle("");
-        setSubtitle("");
-        setDescription("");
-        setPrice("");
-        setCoverImage("");
-        setCoverFile(null);
-
-        setContent({
-          type: "doc",
-          content: [
-            {
-              type: "paragraph",
-            },
-          ],
-        });
-      } else if (data.story?.id) {
+      // Continue in the chapter manager to add more chapters.
+      if (data.story?.id) {
         router.push(`/upload-story/${data.story.id}`);
       }
     } catch (error: any) {
@@ -204,7 +204,7 @@ export default function UploadStoryPage() {
     <div
       style={{
         minHeight: "100vh",
-        padding: "24px",
+        padding: "48px clamp(10px, 3vw, 24px) 40px",
         background: "transparent",
         color: "var(--text)",
         fontFamily: "system-ui, sans-serif",
@@ -218,7 +218,7 @@ export default function UploadStoryPage() {
           background: "rgba(255,255,255,0.06)",
           backdropFilter: "blur(12px)",
           borderRadius: 16,
-          padding: 24,
+          padding: "clamp(14px, 4vw, 24px)",
           boxShadow: "0 10px 30px rgba(255,77,166,0.15)",
           boxSizing: "border-box",
         }}
@@ -241,8 +241,8 @@ export default function UploadStoryPage() {
             fontSize: 14,
           }}
         >
-          Create a rich written story with images, formatting,
-          links and more.
+          Set up the book and write its first chapter. You can add more
+          chapters, and choose which are free or paid, right after saving.
         </p>
 
         <div
@@ -296,19 +296,6 @@ export default function UploadStoryPage() {
                 resize: "vertical",
                 fontFamily: "inherit",
               }}
-            />
-          </div>
-
-          {/* PRICE */}
-          <div>
-            <label style={labelStyle}>Price</label>
-
-            <input
-              placeholder="Price in ₦"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              inputMode="decimal"
-              style={inputStyle}
             />
           </div>
 
@@ -385,8 +372,16 @@ export default function UploadStoryPage() {
           {/* STORY EDITOR */}
           <div style={{ marginTop: 8 }}>
             <label style={labelStyle}>
-              Story Content
+              Chapter 1
             </label>
+
+            <div style={{ marginBottom: 12 }}>
+              <ChapterSettings
+                value={chapterSettings}
+                onChange={setChapterSettings}
+                number={1}
+              />
+            </div>
 
             <StoryEditor
               content={content}
@@ -452,7 +447,7 @@ export default function UploadStoryPage() {
             >
               {loading
                 ? "Publishing..."
-                : "Publish Story"}
+                : "Publish Book"}
             </button>
           </div>
 

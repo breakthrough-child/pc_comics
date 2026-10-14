@@ -60,6 +60,7 @@ if (!isFreeComic) {
     const comic = await prisma.comic.findUnique({
   where: { id },
   select: {
+    title: true,
     pages: true,
   },
 });
@@ -72,6 +73,7 @@ if (!comic) {
 }
 
 return NextResponse.json({
+  title: comic.title,
   pages: Array.isArray(comic.pages) ? comic.pages : [],
 });
 

@@ -1,10 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { CoinIcon } from "./StoryContent";
 import { useEffect, useState } from "react";
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname() || "";
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [role, setRole] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -98,6 +100,15 @@ export default function Navbar() {
 
               router.push("/comics");
             }
+
+  // The comic and chapter readers have their own immersive toolbars.
+  const isImmersive =
+    pathname.startsWith("/read/") ||
+    /^\/stories\/[^/]+\/chapters\//.test(pathname);
+
+  if (isImmersive) {
+    return null;
+  }
 
   return (
   <>
@@ -324,6 +335,33 @@ export default function Navbar() {
 </>
 
   </button>
+
+  {user?.userId && (
+    <button
+      onClick={() => {router.push("/coins"); setMenuOpen(false);}}
+      style={mobileNavBtn}
+    >
+      <span style={{ marginRight: 8, display: "inline-flex" }}>
+        <CoinIcon size={18} />
+      </span>
+      Coins
+      <span style={{ marginLeft: "auto", fontWeight: 800 }}>
+        {(user?.coins ?? 0).toLocaleString()}
+      </span>
+    </button>
+  )}
+
+  {role === "ADMIN" && (
+    <button
+      onClick={() => {router.push("/admin/coins"); setMenuOpen(false);}}
+      style={mobileNavBtn}
+    >
+      <span style={{ marginRight: 8, display: "inline-flex" }}>
+        <CoinIcon size={18} />
+      </span>
+      Coin Packages
+    </button>
+  )}
 </div>
 
       {/* THEME */}
@@ -611,7 +649,30 @@ padding: "12px",
   Books
 </>
       </button>
+
+      {role === "ADMIN" && (
+        <button
+          onClick={() => router.push("/admin/coins")}
+          style={{
+            ...navBtn,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <CoinIcon size={18} />
+          Coin Packages
+        </button>
+      )}
     </div>
+
+    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+    {user?.userId && (
+      <a href="/coins" className="pc-coin-pill" title="Buy coins">
+        <CoinIcon size={18} />
+        {(user?.coins ?? 0).toLocaleString()}
+      </a>
+    )}
 
     <button
       onClick={toggleTheme}
@@ -666,6 +727,7 @@ padding: "12px",
   )}
 </>
     </button>
+    </div>
   </div>
 )}
 

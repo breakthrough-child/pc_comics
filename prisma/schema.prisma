@@ -19,6 +19,11 @@ model User {
   purchases      Purchase[]
   reviews        Review[]
   storyPurchases StoryPurchase[]
+
+  // Coin wallet used to unlock story chapters
+  coins            Int               @default(0)
+  chapterUnlocks   ChapterUnlock[]
+  coinTransactions CoinTransaction[]
 }
 
 model Comic {
@@ -114,15 +119,84 @@ model Story {
   subtitle    String?
   description String?
   coverImage  String?
+  // Legacy whole-book price. Stories are now sold per chapter with coins.
   price       Float           @default(0)
-  content     Json
+  // Legacy single-body content. Story text now lives in Chapter.content.
+  content     Json?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   isPublished Boolean         @default(false)
 
+  chapters    Chapter[]
+  // Legacy whole-book purchases. Owners keep access to every chapter.
   purchases   StoryPurchase[]
   reviews     Review[]
   comments    Comment[]
+}
+
+model Chapter {
+  id          String          @id @default(uuid())
+  storyId     String
+  number      Int
+  title       String
+  content     Json
+  // Free chapters can be read by anyone. Paid chapters cost `price` coins.
+  isFree      Boolean         @default(false)
+  price       Int             @default(0)
+  isPublished Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  story       Story           @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  unlocks     ChapterUnlock[]
+
+  @@index([storyId, number])
+}
+
+model ChapterUnlock {
+  id         String   @id @default(uuid())
+  userId     String
+  chapterId  String
+  coinsSpent Int
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter    Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([chapterId])
+}
+
+// Admin-defined bundles: pay `priceNaira`, receive `coins`.
+model CoinPackage {
+  id         String   @id @default(uuid())
+  name       String
+  coins      Int
+  priceNaira Float
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Ledger of every coin balance change.
+model CoinTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  // PURCHASE | UNLOCK | ADJUSTMENT
+  type        String
+  // Positive when coins are added, negative when spent.
+  coins       Int
+  amountNaira Float?
+  // Paystack reference for purchases. Unique so a payment is only credited once.
+  reference   String?  @unique
+  chapterId   String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model StoryPurchase {

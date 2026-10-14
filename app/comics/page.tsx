@@ -207,17 +207,8 @@ async function logout() {
 
     
   <div
-  className="comics-root"
-  style={{
-        minHeight: "100vh",
-        padding: "40px 50px",
-        //background: "var(--bg)",
-        background: "transparent",
-        color: "var(--text)",
-        fontFamily: "system-ui, sans-serif",
-        transition: "background 0.3s ease, color 0.3s ease",
-        paddingBottom: "200px",
-      }}
+  className="comics-root pc-page"
+  style={{ minHeight: "100vh", paddingBottom: 220 }}
     >
 
 
@@ -261,15 +252,7 @@ async function logout() {
     marginBottom: 30,
   }}
 >
-  <img
-  src="/pclogo.png"
-  alt="PC Comics"
-  style={{
-    height: 200,
-    width: "auto",
-    objectFit: "contain",
-  }}
-/>
+  <img src="/pclogo.png" alt="PC Comics" className="page-logo" />
 
   <div
     className="header-actions"
@@ -349,7 +332,7 @@ async function logout() {
 
 
     <div style={{ marginBottom: 30 }}>
-  <h1 className="comics-title" style={{ fontSize: 42, fontWeight: 800, letterSpacing: -1 }}>
+  <h1 className="page-hero-title">
     Comics Library
   </h1>
   <p style={{ opacity: 0.6 }}>
@@ -379,234 +362,93 @@ async function logout() {
 {loadingComics ? (
   <p style={{ padding: 20 }}>Loading comics...</p>
 ) : (
-  
-<div
-  className="comics-grid"
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-    gap: 20,
-  }}
->
-
+  <div className="book-grid">
     {comics.map((comic) => (
-  <div
-    key={comic.id}
-    className="comics-card"
-    style={{
-      position: "relative",
-      borderRadius: 16,
-      overflow: "hidden",
-      background: "rgba(255,255,255,0.06)",
-      backdropFilter: "blur(12px)",
-      boxShadow:
-        highlightedComicId === comic.id
-          ? "0 0 0 2px #ff4da6, 0 20px 50px rgba(255,77,166,0.6)"
-          : "0 10px 25px rgba(0,0,0,0.25)",
-      transform:
-        highlightedComicId === comic.id
-          ? "scale(1.03)"
-          : "none",
-      transition: "all 0.3s ease", //"transform 0.25s ease, box-shadow 0.25s ease",
-      cursor: "pointer",
-      display: "flex",
-      flexDirection: "column",
-    }}
-    
-    onMouseEnter={(e) => {
-      if (window.innerWidth > 768) {
-        e.currentTarget.style.transform = "translateY(-6px)";
-        e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,0,0,0.5)";
-      }
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.transform = "none";
-      e.currentTarget.style.boxShadow = "0 10px 25px rgba(0,0,0,0.25)";
-    }}
-
-    onClick={(e) => {
-  const target = e.target as HTMLElement;
-
-  // prevent modal when clicking buttons or links
-  if (
-    target.tagName === "BUTTON" ||
-    target.closest("button") ||
-    target.tagName === "A" ||
-    target.closest("a")
-  ) return;
-
-  setSelectedComic(comic);
-}}
-  >
-    {/* IMAGE */}
-    <div style={{ position: "relative" }}>
-      <img
-        src={comic.imageUrl}
-        style={{
-          width: "100%",
-          height: 260,
-          objectFit: "cover",
-        }}
-      />
-
-      {/* PRICE BADGE */}
       <div
-        style={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          background: "rgba(0,0,0,0.7)",
-          padding: "4px 8px",
-          borderRadius: 8,
-          fontSize: 12,
-          color: "#00ffcc",
-          fontWeight: 600,
+        key={comic.id}
+        className={`book-card ${
+          highlightedComicId === comic.id ? "is-highlighted" : ""
+        }`}
+        onClick={(e) => {
+          // Buttons and links inside the card handle their own clicks.
+          if ((e.target as HTMLElement).closest("button, a")) return;
+          setSelectedComic(comic);
         }}
       >
-        ₦{comic.price}
+        <div className="book-cover">
+          <img src={comic.imageUrl} alt={comic.title} loading="lazy" />
+          <span className="book-badge book-badge-right">
+            ₦{comic.price.toLocaleString()}
+          </span>
+          {comic.purchased && <span className="book-badge">Owned</span>}
+        </div>
+
+        <div className="book-body">
+          <h2 className="book-title">{comic.title}</h2>
+
+          <div className="book-meta">
+            ★ {(comic as any).avgRating
+              ? (comic as any).avgRating.toFixed(1)
+              : "No rating"}
+          </div>
+
+          <p className="book-desc">{comic.description}</p>
+
+          <div className="book-actions">
+            {comic.purchased ? (
+              <a href={`/read/${comic.id}`} className="pc-btn">
+                Read
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="pc-btn"
+                onClick={() => buyComic(comic.id)}
+              >
+                Buy
+              </button>
+            )}
+
+            {role === "ADMIN" && (
+              <button
+                type="button"
+                className="pc-btn pc-btn-ghost"
+                onClick={() => setEditingComic(comic)}
+              >
+                Edit
+              </button>
+            )}
+
+            {role === "ADMIN" && (
+              <button
+                type="button"
+                className="pc-btn pc-btn-danger"
+                onClick={async () => {
+                  if (!confirm("Are you sure you want to delete this comic?")) return;
+
+                  const res = await fetch(`/api/comics/${comic.id}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                  });
+
+                  const data = await res.json();
+
+                  if (res.ok) {
+                    alert(data.message);
+                    setComics((prev) => prev.filter((c) => c.id !== comic.id));
+                  } else {
+                    alert(data.error);
+                  }
+                }}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-
-    {/* CONTENT */}
-    <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-      
-      <h2
-        style={{
-          fontSize: 16,
-          margin: 0,
-          fontWeight: 600,
-          lineHeight: 1.3,
-        }}
-      >
-        {comic.title}
-      </h2>
-
-      <div style={{ fontSize: 13, opacity: 0.8 }}>
-        ⭐ {(comic as any).avgRating ? (comic as any).avgRating.toFixed(1) : "No rating"}
-      </div>
-
-      <p
-        style={{
-          fontSize: 13,
-          opacity: 0.85,
-          lineHeight: 1.4,
-          maxHeight: 40,
-          overflow: "hidden",
-        }}
-      >
-        {comic.description}
-      </p>
-
-      {/* BUTTONS */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 6,
-          marginTop: 6,
-        }}
-      >
-        {comic.purchased ? (
-          <a
-            href={`/read/${comic.id}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              style={{
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: "linear-gradient(90deg, #ff4da6, #ff85c1)",
-                color: "#fff",
-                fontSize: 12,
-                cursor: "pointer",
-              }}
-            >
-              Read
-            </button>
-          </a>
-        ) : (
-          <button
-            className="comics-btn"
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "none",
-              background: "linear-gradient(90deg, #ff4da6, #ff85c1)",
-              color: "#fff",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              buyComic(comic.id);
-            }}
-          >
-            Buy
-          </button>
-        )}
-
-        {role === "ADMIN" && (
-          <button
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "none",
-              background: "#333",
-              color: "#fff",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingComic(comic);
-            }}
-          >
-            Edit
-          </button>
-        )}
-
-        {role === "ADMIN" && (
-          <button
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "none",
-              background: "#ff3b3b",
-              color: "#fff",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
-            onClick={async (e) => {
-              e.stopPropagation();
-              
-              const confirmDelete = confirm("Are you sure you want to delete this comic?");
-              if (!confirmDelete) return;
-
-              const res = await fetch(`/api/comics/${comic.id}`, {
-                method: "DELETE",
-                credentials: "include",
-              });
-
-              const data = await res.json();
-
-              if (res.ok) {
-                alert(data.message);
-                setComics((prev) => prev.filter((c) => c.id !== comic.id));
-              } else {
-                alert(data.error);
-              }
-            }}
-          >
-            Delete
-          </button>
-        )}
-      </div>
-    </div>
+    ))}
   </div>
-))}
-
-</div>
 )}
 
     {editingComic && (

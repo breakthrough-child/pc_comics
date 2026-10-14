@@ -1,67 +1,79 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromToken } from "@/lib/getUserFromToken";
+import { buildPreviewContent } from "@/lib/chapters";
 
 /**
  * GET /api/stories
  *
  * Admins can see all stories.
  * Regular users can only see published stories.
+ *
+ * Chapter content is never sent here. Each story only carries a short,
+ * text-only preview of its first chapter for the preview modal.
  */
 export async function GET(req: Request) {
   const user = getUserFromToken(req);
-  const userId = user?.userId || null;
   const role = user?.role;
+  const isAdmin = role === "ADMIN";
 
   try {
     const stories = await prisma.story.findMany({
-      where:
-        role === "ADMIN"
-          ? {}
-          : {
-              isPublished: true,
-            },
-
-      orderBy: {
-        createdAt: "desc",
-      },
-
+      where: isAdmin ? {} : { isPublished: true },
+      orderBy: { createdAt: "desc" },
       select: {
-  id: true,
-  title: true,
-  subtitle: true,
-  description: true,
-  coverImage: true,
-  price: true,
-  content: true,
-  createdAt: true,
-  updatedAt: true,
-  isPublished: true,
-
-  purchases: userId
-    ? {
-        where: { userId },
-        select: { id: true },
-      }
-    : false,
-},
+        id: true,
+        title: true,
+        subtitle: true,
+        description: true,
+        coverImage: true,
+        createdAt: true,
+        updatedAt: true,
+        isPublished: true,
+        chapters: {
+          where: isAdmin ? {} : { isPublished: true },
+          orderBy: { number: "asc" },
+          select: {
+            id: true,
+            number: true,
+            isFree: true,
+            price: true,
+            content: true,
+          },
+        },
+        reviews: {
+          select: { rating: true },
+        },
+      },
     });
 
-    const formatted = stories.map((story: any) => ({
-  id: story.id,
-  title: story.title,
-  subtitle: story.subtitle,
-  description: story.description,
-  coverImage: story.coverImage,
-  price: story.price,
-  content: story.content,
-  isPublished: story.isPublished,
-  purchased: userId
-    ? story.purchases.length > 0
-    : false,
-}));
+    const formatted = stories.map((story) => {
+      const firstChapter = story.chapters[0];
+      const ratings = story.reviews.map((r) => r.rating);
 
-return NextResponse.json(formatted);
+      return {
+        id: story.id,
+        title: story.title,
+        subtitle: story.subtitle,
+        description: story.description,
+        coverImage: story.coverImage,
+        isPublished: story.isPublished,
+        updatedAt: story.updatedAt,
+        chapterCount: story.chapters.length,
+        freeChapterCount: story.chapters.filter(
+          (c) => c.isFree || c.price <= 0
+        ).length,
+        firstChapterId: firstChapter?.id || null,
+        previewContent: firstChapter
+          ? buildPreviewContent(firstChapter.content)
+          : null,
+        avgRating: ratings.length
+          ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+          : null,
+      };
+    });
+
+    return NextResponse.json(formatted);
   } catch (error) {
     console.error("Failed to fetch stories:", error);
 
@@ -76,7 +88,7 @@ return NextResponse.json(formatted);
  * POST /api/stories
  *
  * Admin only.
- * Creates a new unpublished story.
+ * Creates a new book together with its first chapter.
  */
 export async function POST(req: Request) {
   const user = getUserFromToken(req);
@@ -96,17 +108,18 @@ export async function POST(req: Request) {
       subtitle,
       description,
       coverImage,
-      price,
-      content,
       isPublished,
+      chapter,
     } = await req.json();
 
-    if (!title || !content || price === undefined || price === null || price === "") {
+    if (!title || !chapter?.content) {
       return NextResponse.json(
-        { error: "Title, price and content are required" },
+        { error: "Title and first chapter content are required" },
         { status: 400 }
       );
     }
+
+    const price = Math.max(0, Math.round(Number(chapter.price) || 0));
 
     const story = await prisma.story.create({
       data: {
@@ -114,9 +127,17 @@ export async function POST(req: Request) {
         subtitle: subtitle ?? null,
         description: description ?? null,
         coverImage: coverImage ?? null,
-        price: Number(price) || 0,
-        content,
         isPublished: Boolean(isPublished),
+        chapters: {
+          create: {
+            number: 1,
+            title: chapter.title?.trim() || "Chapter 1",
+            content: chapter.content,
+            isFree: chapter.isFree !== false,
+            price,
+            isPublished: true,
+          },
+        },
       },
     });
 
