@@ -209,3 +209,29 @@ model StoryPurchase {
 
   @@unique([userId, storyId])
 }
+
+// One row per page visit. visitorId is a random id kept in the visitor's
+// browser, so unique visitors can be counted without accounts or cookies.
+model PageView {
+  id        String   @id @default(uuid())
+  visitorId String
+  path      String
+  // Where the visit came from, e.g. "Instagram", "Google", "Direct",
+  // or the utm_source on an ad link.
+  source    String   @default("Direct")
+  referrer  String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorId])
+}
+
+// Site-wide settings. A single row with id "site".
+model SiteSettings {
+  id               String   @id @default("site")
+  // Whether the public reader counter is shown on the site.
+  showReaderCount  Boolean  @default(false)
+  readerCountLabel String   @default("readers")
+  updatedAt        DateTime @updatedAt
+}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import ComicBackground from "./components/ComicBackground";
+import VisitTracker from "./components/VisitTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({
 
   <div style={{ position: "relative", zIndex: 10 }}>
     <Navbar />
+    <VisitTracker />
     {children}
   </div>
 </body>

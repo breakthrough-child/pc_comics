@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import ComicPreviewModal from "../components/ComicPreviewModal";
+import ReaderCount from "../components/ReaderCount";
 import { useSearchParams } from "next/navigation";
 
 type Comic = {
@@ -338,6 +339,7 @@ async function logout() {
   <p style={{ opacity: 0.6 }}>
     Stream & own premium comics
   </p>
+  <ReaderCount style={{ marginTop: 4 }} />
 </div>
 
     {/* <button

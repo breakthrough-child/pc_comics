@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import StoryPreviewModal from "../components/StoryPreviewModal";
 import SiteFooter from "../components/SiteFooter";
+import ReaderCount from "../components/ReaderCount";
 import { CoinIcon } from "../components/StoryContent";
 
 type StorySummary = {
@@ -169,6 +170,7 @@ function StoriesPageContent() {
         <p style={{ color: "var(--muted)", margin: "8px 0 0" }}>
           Read chapter by chapter. Start free, unlock the rest with coins.
         </p>
+        <ReaderCount style={{ marginTop: 14 }} />
       </div>
 
       {error && (
