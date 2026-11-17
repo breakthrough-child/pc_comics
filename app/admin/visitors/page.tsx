@@ -137,7 +137,6 @@ export default function VisitorsPage() {
   const topSource = Math.max(1, ...stats.sources.map((s) => s.visitors));
   const topPage = Math.max(1, ...stats.pages.map((p) => p.visitors));
   const todayChange = totals.today.visitors - totals.yesterday.visitors;
-  const labelEvery = stats.days <= 7 ? 1 : stats.days <= 30 ? 5 : 15;
   const active = hovered !== null ? stats.series[hovered] : null;
 
   return (
@@ -173,7 +172,7 @@ export default function VisitorsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))",
           gap: 12,
           marginBottom: 24,
         }}
@@ -357,24 +356,24 @@ export default function VisitorsPage() {
                 </div>
 
                 {/* X axis */}
-                <div style={{ display: "flex", gap: stats.days > 30 ? 1 : 2, marginTop: 6 }}>
-                  {stats.series.map((d, i) => (
-                    <span
-                      key={d.day}
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        fontSize: 11,
-                        color: "var(--muted)",
-                        whiteSpace: "nowrap",
-                        overflow: "visible",
-                        textAlign: "center",
-                      }}
-                    >
-                      {(stats.series.length - 1 - i) % labelEvery === 0 ? formatDay(d.day) : ""}
-                    </span>
-                  ))}
-                </div>
+                {stats.days <= 7 ? (
+                  <div style={{ display: "flex", gap: 2, marginTop: 6 }}>
+                    {stats.series.map((d) => (
+                      <span key={d.day} style={{ ...axisLabel, flex: 1, minWidth: 0, textAlign: "center" }}>
+                        {formatDay(d.day)}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  // Longer ranges: first, middle and last day, kept inside the card.
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                    {[0, Math.floor((stats.series.length - 1) / 2), stats.series.length - 1].map((i) => (
+                      <span key={i} style={axisLabel}>
+                        {formatDay(stats.series[i].day)}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -570,6 +569,12 @@ export default function VisitorsPage() {
 }
 
 const cell: React.CSSProperties = { padding: "8px 6px" };
+
+const axisLabel: React.CSSProperties = {
+  fontSize: 11,
+  color: "var(--muted)",
+  whiteSpace: "nowrap",
+};
 
 function StatTile({
   title,

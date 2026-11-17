@@ -13,7 +13,7 @@ async function totalsSince(since: Date | null): Promise<Totals> {
   const rows = since
     ? await prisma.$queryRaw<Totals[]>`
         SELECT COUNT(DISTINCT "visitorId")::int AS visitors, COUNT(*)::int AS views
-        FROM "PageView" WHERE "createdAt" >= ${since}
+        FROM "PageView" WHERE "createdAt" >= (${since}::timestamptz AT TIME ZONE 'UTC')
       `
     : await prisma.$queryRaw<Totals[]>`
         SELECT COUNT(DISTINCT "visitorId")::int AS visitors, COUNT(*)::int AS views
@@ -132,34 +132,34 @@ export async function GET(req: Request) {
       prisma.$queryRaw<Totals[]>`
         SELECT COUNT(DISTINCT "visitorId")::int AS visitors, COUNT(*)::int AS views
         FROM "PageView"
-        WHERE "createdAt" >= ${lagosDayStart(1)} AND "createdAt" < ${lagosDayStart(0)}
+        WHERE "createdAt" >= (${lagosDayStart(1)}::timestamptz AT TIME ZONE 'UTC') AND "createdAt" < (${lagosDayStart(0)}::timestamptz AT TIME ZONE 'UTC')
       `.then((rows) => rows[0] ?? { visitors: 0, views: 0 }),
       totalsSince(lagosDayStart(6)),
       totalsSince(lagosDayStart(29)),
       totalsSince(null),
       prisma.$queryRaw<{ count: number }[]>`
         SELECT COUNT(DISTINCT "visitorId")::int AS count
-        FROM "PageView" WHERE "createdAt" >= ${new Date(Date.now() - 5 * 60_000)}
+        FROM "PageView" WHERE "createdAt" >= (${new Date(Date.now() - 5 * 60_000)}::timestamptz AT TIME ZONE 'UTC')
       `.then((rows) => rows[0]?.count ?? 0),
       prisma.$queryRaw<{ day: string; visitors: number; views: number }[]>`
         SELECT to_char(("createdAt" + ${offset}::interval)::date, 'YYYY-MM-DD') AS day,
                COUNT(DISTINCT "visitorId")::int AS visitors,
                COUNT(*)::int AS views
         FROM "PageView"
-        WHERE "createdAt" >= ${rangeStart}
+        WHERE "createdAt" >= (${rangeStart}::timestamptz AT TIME ZONE 'UTC')
         GROUP BY 1 ORDER BY 1
       `,
       prisma.$queryRaw<{ path: string; visitors: number; views: number }[]>`
         SELECT "path", COUNT(DISTINCT "visitorId")::int AS visitors, COUNT(*)::int AS views
         FROM "PageView"
-        WHERE "createdAt" >= ${rangeStart}
+        WHERE "createdAt" >= (${rangeStart}::timestamptz AT TIME ZONE 'UTC')
         GROUP BY "path" ORDER BY visitors DESC, views DESC
         LIMIT 10
       `,
       prisma.$queryRaw<{ source: string; visitors: number }[]>`
         SELECT "source", COUNT(DISTINCT "visitorId")::int AS visitors
         FROM "PageView"
-        WHERE "createdAt" >= ${rangeStart}
+        WHERE "createdAt" >= (${rangeStart}::timestamptz AT TIME ZONE 'UTC')
         GROUP BY "source" ORDER BY visitors DESC
         LIMIT 10
       `,
